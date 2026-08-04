@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Álbum Copa 2026 — Estoque</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font:15px/1.4 system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding-bottom:90px}
+header{position:sticky;top:0;z-index:5;background:#111c33;padding:12px;border-bottom:1px solid #24344f}
+h1{margin:0 0 8px;font-size:17px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px 14px;color:#fff;background:#334966}
+button:active{transform:scale(.96)}
+.g{background:#16a34a}.r{background:#dc2626}.b{background:#2563eb}.gr{background:#475569}
+input,select{font:inherit;padding:9px;border-radius:9px;border:1px solid #34486b;background:#0b1425;color:#e2e8f0}
+#stats{font-size:13px;color:#93a4bd;margin-top:8px}
+.grp{margin:14px 10px}
+.grp h2{font-size:14px;color:#8fa6c4;margin:0 0 8px;letter-spacing:.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:7px}
+.c{background:#1b2942;border:1px solid #2b3d5c;border-radius:10px;padding:7px 4px;text-align:center;cursor:pointer;user-select:none}
+.c b{display:block;font-size:12px}
+.c small{font-size:11px;color:#93a4bd}
+.c.have{background:#14532d;border-color:#22c55e}
+.c.rep{background:#78350f;border-color:#f59e0b}
+#fab{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:6;display:flex;gap:10px}
+#fab button{box-shadow:0 6px 18px #0008;padding:14px 20px;border-radius:30px}
+#scan{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column}
+#scan video{flex:1;width:100%;object-fit:cover}
+#guia{position:absolute;border:3px solid #facc15;border-radius:8px;box-shadow:0 0 0 9999px #0006;pointer-events:none}
+#modoBar{padding:12px;text-align:center;font-weight:700;letter-spacing:1px}
+#log{position:absolute;left:8px;bottom:78px;max-height:34vh;overflow:auto;font-size:14px;font-weight:700;text-shadow:0 2px 4px #000}
+#scanFoot{position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;padding:12px;background:#000a}
+#hint{position:absolute;top:56px;width:100%;text-align:center;font-size:13px;color:#cbd5e1;text-shadow:0 1px 3px #000}
+dialog{background:#16233c;color:#e2e8f0;border:1px solid #34486b;border-radius:14px;max-width:92vw}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚽ Álbum FIFA World Cup 2026</h1>
+  <div class="row">
+    <input id="busca" placeholder="Buscar código…" style="flex:1;min-width:120px">
+    <select id="filtro">
+      <option value="all">Todas</option>
+      <option value="miss">Faltando</option>
+      <option value="have">Tenho</option>
+      <option value="rep">Repetidas</option>
+    </select>
+    <button class="gr" onclick="exportar()">⬇︎</button>
+    <button class="gr" onclick="fileIn.click()">⬆︎</button>
+    <input type="file" id="fileIn" accept=".json" hidden onchange="importar(this)">
+  </div>
+  <div id="stats"></div>
+</header>
+
+<main id="app"></main>
+
+<div id="fab">
+  <button class="g" onclick="iniciarScan('add')">📷 ➕ Colar</button>
+  <button class="r" onclick="iniciarScan('del')">📷 ➖ Trocar</button>
+</div>
+
+<div id="scan">
+  <div id="modoBar"></div>
+  <video id="v" playsinline muted></video>
+  <div id="guia"></div>
+  <div id="hint">Encoste o código (ex.: FWC 8) dentro do retângulo amarelo</div>
+  <div id="log"></div>
+  <div id="scanFoot">
+    <button class="gr" style="flex:1" onclick="toggleTorch()">🔆 Luz</button>
+    <button class="b" style="flex:1" onclick="manual()">⌨️ Manual</button>
+    <button class="r" style="flex:1" onclick="pararScan()">✕ Fechar</button>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog">
+    <h3 id="dlgT" style="margin:0 0 10px"></h3>
+    <div class="row">
+      <input id="dlgQ" type="number" min="0" style="width:90px">
+      <button class="b" value="ok">Salvar</button>
+      <button class="gr" value="x">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+/* ─── 1. ESTRUTURA DO ÁLBUM (ajuste as quantidades quando confirmar) ─── */
+const ALBUM = [
+  {g:'Abertura / FIFA',      s:['FWC'], n:20},
+  {g:'Troféu / Legends',     s:['FWC'], n:0},
+  {g:'Canadá',   s:['CAN'], n:20},
+  {g:'México',   s:['MEX'], n:20},
+  {g:'EUA',      s:['USA'], n:20},
+  {g:'Brasil',   s:['BRA'], n:20},
+  {g:'Argentina',s:['ARG'], n:20},
+  {g:'França',   s:['FRA'], n:20},
+  {g:'Inglaterra',s:['ENG'],n:20},
+  {g:'Espanha',  s:['ESP'], n:20},
+  {g:'Portugal', s:['POR'], n:20},
+  {g:'Alemanha', s:['GER'], n:20},
+  {g:'Holanda',  s:['NED'], n:20},
+  {g:'Bélgica',  s:['BEL'], n:20},
+  {g:'Croácia',  s:['CRO'], n:20},
+  {g:'Uruguai',  s:['URU'], n:20},
+  {g:'Colômbia', s:['COL'], n:20},
+  {g:'Japão',    s:['JPN'], n:20},
+  {g:'Coreia do Sul',s:['KOR'],n:20},
+  {g:'Marrocos', s:['MAR'], n:20},
+  {g:'Senegal',  s:['SEN'], n:20},
+];
+
+const CODES = {};           // "BRA 5" -> true
+const LISTA = [];
+ALBUM.forEach(grp=>grp.s.forEach(sig=>{
+  for(let i=1;i<=grp.n;i++){ const c=sig+' '+i; CODES[c]=1; LISTA.push({c,sig,n:i,g:grp.g}); }
+}));
+
+/* ─── 2. ESTOQUE ─── */
+let est = JSON.parse(localStorage.getItem('album2026')||'{}');
+const save = ()=>localStorage.setItem('album2026',JSON.stringify(est));
+
+function aplicar(cod,delta){
+  const q=(est[cod]||0)+delta;
+  if(q<=0) delete est[cod]; else est[cod]=q;
+  save(); render();
+  return est[cod]||0;
+}
+function setQtd(cod,q){ q=Math.max(0,q|0); if(!q) delete est[cod]; else est[cod]=q; save(); render(); }
+
+/* ─── 3. RENDER ─── */
+const app=document.getElementById('app');
+function render(){
+  const q=busca.value.trim().toUpperCase(), f=filtro.value;
+  let html='', atual='', total=LISTA.length, tenho=0, reps=0;
+  LISTA.forEach(it=>{ const n=est[it.c]||0; if(n>0)tenho++; if(n>1)reps+=n-1; });
+
+  LISTA.forEach(it=>{
+    const n=est[it.c]||0;
+    if(q && !it.c.includes(q)) return;
+    if(f==='miss'&&n>0) return;
+    if(f==='have'&&n<1) return;
+    if(f==='rep'&&n<2) return;
+    if(it.g!==atual){ if(atual)html+='</div></div>'; atual=it.g; html+=`<div class="grp"><h2>${it.g}</h2><div class="grid">`; }
+    const cls=n>1?'rep':n>0?'have':'';
+    html+=`<div class="c ${cls}" onclick="tap('${it.c}')" oncontextmenu="edit('${it.c}');return false">
+      <b>${it.c}</b><small>${n?'×'+n:'—'}</small></div>`;
+  });
+  app.innerHTML = html ? html+'</div></div>' : '<p style="text-align:center;color:#93a4bd">Nada aqui.</p>';
+  stats.textContent=`${tenho}/${total} colecionadas (${(tenho/total*100).toFixed(1)}%) · ${reps} repetidas`;
+}
+let tmr;
+function tap(c){ aplicar(c,+1); navigator.vibrate?.(30); }
+function edit(c){ dlgT.textContent=c; dlgQ.value=est[c]||0; dlg.showModal();
+  dlg.onclose=()=>{ if(dlg.returnValue==='ok') setQtd(c,+dlgQ.value); }; }
+busca.oninput=filtro.onchange=render;
+
+/* ─── 4. IMPORT / EXPORT ─── */
+function exportar(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(est)],{type:'application/json'}));
+  a.download='album2026.json'; a.click();
+}
+function importar(inp){
+  const fr=new FileReader();
+  fr.onload=()=>{ try{ est=JSON.parse(fr.result); save(); render(); }catch(e){ alert('Arquivo inválido'); } };
+  fr.readAsText(inp.files[0]);
+}
+
+/* ─── 5. SCANNER CONTÍNUO ─── */
+let worker,stream,track,rodando=false,modo='add',torch=false;
+const ult={},pend={};
+const ROI={x:.40,y:.05,w:.58,h:.14};   // faixa superior direita
+
+async function iniciarScan(m){
+  modo=m; rodando=true;
+  scan.style.display='flex';
+  modoBar.textContent = m==='add'?'➕ MODO COLAR':'➖ MODO TROCAR';
+  modoBar.style.background = m==='add'?'#16a34a':'#dc2626';
+  log.innerHTML='';
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920}}});
+  }catch(e){ alert('Sem acesso à câmera: '+e.message); return pararScan(); }
+  track=stream.getVideoTracks()[0];
+  v.srcObject=stream; await v.play();
+  posGuia(); addEventListener('resize',posGuia);
+  if(!worker){
+    hint.textContent='Carregando OCR…';
+    worker=await Tesseract.createWorker('eng');
+    await worker.setParameters({
+      tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ',
+      tessedit_pageseg_mode:'7'
+    });
+  }
+  hint.textContent='Encoste o código dentro do retângulo amarelo';
+  loop();
+}
+function posGuia(){
+  const r=v.getBoundingClientRect();
+  Object.assign(guia.style,{left:r.left+r.width*ROI.x+'px',top:r.top+r.height*ROI.y+'px',
+    width:r.width*ROI.w+'px',height:r.height*ROI.h+'px'});
+}
+async function toggleTorch(){ torch=!torch; try{ await track.applyConstraints({advanced:[{torch}]}); }catch(e){ alert('Sem lanterna'); } }
+
+const cv=document.createElement('canvas'), cx=cv.getContext('2d',{willReadFrequently:true});
+async function loop(){
+  if(!rodando) return;
+  if(v.videoWidth){
+    const W=v.videoWidth,H=v.videoHeight;
+    cv.width=W*ROI.w*2; cv.height=H*ROI.h*2;
+    cx.drawImage(v,W*ROI.x,H*ROI.y,W*ROI.w,H*ROI.h,0,0,cv.width,cv.height);
+    // cinza → inverte (texto claro em fundo escuro) → binariza
+    const d=cx.getImageData(0,0,cv.width,cv.height),p=d.data;
+    for(let i=0;i<p.length;i+=4){
+      const y=255-(p[i]*.3+p[i+1]*.59+p[i+2]*.11);
+      p[i]=p[i+1]=p[i+2]= y>140?255:0;
+    }
+    cx.putImageData(d,0,0);
+    try{ const {data}=await worker.recognize(cv); processar(data.text); }catch(e){}
+  }
+  setTimeout(loop,550);
+}
+
+function normSig(s){ return s.replace(/0/g,'O').replace(/1/g,'I').replace(/5/g,'S').replace(/8/g,'B'); }
+function processar(txt){
+  const t=txt.toUpperCase().replace(/[^A-Z0-9\s]/g,' ');
+  const re=/\b([A-Z0-9]{3,4})\s*([0-9]{1,3})\b/g; let m;
+  while((m=re.exec(t))){
+    if(m[2].length>=4) continue;                   // ignora 005460
+    const cod=normSig(m[1])+' '+parseInt(m[2],10);
+    if(!CODES[cod]) continue;
+    const now=Date.now();
+    if(ult[cod] && now-ult[cod]<2500) continue;    // cooldown
+    if(!pend[cod]){ pend[cod]=now; continue; }     // exige 2ª leitura igual
+    if(now-pend[cod]>4000){ pend[cod]=now; continue; }
+    delete pend[cod]; ult[cod]=now;
+    const q=aplicar(cod, modo==='add'?+1:-1);
+    navigator.vibrate?.(modo==='add'?70:[40,50,40]);
+    beep(modo==='add'?880:420);
+    log.insertAdjacentHTML('afterbegin',
+      `<div style="color:${modo==='add'?'#4ade80':'#f87171'}">${modo==='add'?'➕':'➖'} ${cod} → ×${q}</div>`);
+  }
+}
+let ac;
+function beep(f){ try{ ac=ac||new AudioContext(); const o=ac.createOscillator(),g=ac.createGain();
+  o.frequency.value=f; o.connect(g); g.connect(ac.destination); g.gain.value=.15;
+  o.start(); o.stop(ac.currentTime+.1);}catch(e){} }
+
+function manual(){
+  const c=prompt('Código (ex.: FWC 8):');
+  if(!c) return;
+  const k=c.toUpperCase().trim().replace(/\s+/g,' ');
+  if(!CODES[k]) return alert('Código não existe no álbum.');
+  const q=aplicar(k, modo==='add'?+1:-1);
+  log.insertAdjacentHTML('afterbegin',`<div>⌨️ ${k} → ×${q}</div>`);
+}
+function pararScan(){
+  rodando=false;
+  stream?.getTracks().forEach(t=>t.stop());
+  scan.style.display='none';
+  removeEventListener('resize',posGuia);
+}
+render();
+</script>
+</body>
+</html>
