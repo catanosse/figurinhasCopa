@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Figurinhas Copa 2026 — Gestão</title>
+<title>Catanos Figurinhas — Copa 2026</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d0d0d">
@@ -12,21 +12,81 @@
 
 <div id="toast"></div>
 
-<div class="topbar"><div class="topbar-inner">
-  <span class="brand">🏆 Copa 2026</span>
-  <button class="nav-btn active" data-view="estoque">📦 Estoque</button>
-  <button class="nav-btn" data-view="oferta">📥 Oferta</button>
-  <button class="nav-btn" data-view="livre">✏️ Livre</button>
-  <button class="nav-btn" data-view="procuradas">🔎 Procuradas<span class="nav-pill hidden" id="pillDem">0</span></button>
-  <button class="nav-btn" data-view="orcamentos">💾 Orçamentos</button>
-  <button class="nav-btn" data-view="vendas">💰 Vendas</button>
-  <button class="nav-btn" data-view="scanner">📷 Scanner</button>
-  <div class="switch" id="swIgnore" title="Liga/desliga a conferência — suas seleções são preservadas">
-    <span class="track"></span><span id="swLabel">Conferir estoque</span>
+<!-- ================= TOPBAR ================= -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <button class="icon-btn" id="btnMenu" aria-label="Menu">
+      <span class="burger"><i></i><i></i><i></i></span>
+      <span class="burger-pill hidden" id="burgerPill"></span>
+    </button>
+    <div class="brand-wrap">
+      <span class="brand">🏆 Catanos <b>Figurinhas</b></span>
+      <span class="brand-sub" id="brandSub">Copa 2026 · Estoque</span>
+    </div>
+    <button class="icon-btn" id="btnHelp" aria-label="Ajuda">?</button>
   </div>
-  <button class="nav-btn" data-view="testes">🧪</button>
-  <button class="help-btn" id="btnHelp" title="Como usar">?</button>
-</div></div>
+</div>
+
+<!-- ================= DRAWER ================= -->
+<div class="drawer-bg" id="drawerBg"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="dh-title">🏆 Catanos Figurinhas</div>
+      <div class="dh-sub">Gestão de figurinhas · Copa 2026</div>
+    </div>
+    <button class="icon-btn" id="btnDrawerClose" aria-label="Fechar">✕</button>
+  </div>
+
+  <div class="drawer-stats" id="drawerStats"></div>
+
+  <nav class="drawer-nav">
+    <div class="dn-sec">Coleção</div>
+    <button class="dn-item active" data-view="estoque">
+      <span class="dn-ic">📦</span><span class="dn-tx"><b>Estoque</b><i>Cadastrar e contar repetidas</i></span>
+    </button>
+    <button class="dn-item" data-view="scanner">
+      <span class="dn-ic">📷</span><span class="dn-tx"><b>Scanner</b><i>Ler o número pela câmera</i></span>
+    </button>
+
+    <div class="dn-sec">Negociação</div>
+    <button class="dn-item" data-view="oferta">
+      <span class="dn-ic">📥</span><span class="dn-tx"><b>Nova Oferta</b><i>Colar lista e cruzar estoque</i></span>
+    </button>
+    <button class="dn-item" data-view="livre">
+      <span class="dn-ic">✏️</span><span class="dn-tx"><b>Escolha Livre</b><i>Montar clicando nas figurinhas</i></span>
+    </button>
+    <button class="dn-item" data-view="procuradas">
+      <span class="dn-ic">🔎</span><span class="dn-tx"><b>Procuradas</b><i>Radar de demanda para trocas</i></span>
+      <span class="dn-badge hidden" id="pillDem">0</span>
+    </button>
+
+    <div class="dn-sec">Financeiro</div>
+    <button class="dn-item" data-view="orcamentos">
+      <span class="dn-ic">💾</span><span class="dn-tx"><b>Orçamentos</b><i>Ofertas aguardando o cliente</i></span>
+      <span class="dn-badge alt hidden" id="pillOrc">0</span>
+    </button>
+    <button class="dn-item" data-view="vendas">
+      <span class="dn-ic">💰</span><span class="dn-tx"><b>Vendas</b><i>Histórico e cancelamento</i></span>
+    </button>
+
+    <div class="dn-sec">Sistema</div>
+    <button class="dn-item" data-view="testes">
+      <span class="dn-ic">🧪</span><span class="dn-tx"><b>Testes</b><i>Validar o funcionamento</i></span>
+    </button>
+  </nav>
+
+  <div class="drawer-foot">
+    <div class="switch" id="swIgnore" title="Liga/desliga a conferência — suas seleções são preservadas">
+      <span class="track"></span><span id="swLabel">Conferir estoque</span>
+    </div>
+    <div class="dh-sub" style="margin-top:9px">Dados salvos neste navegador · faça backup 👇</div>
+    <div class="drawer-foot-btns">
+      <button class="btn btn-sm" id="btnExportD">⬇️ Backup</button>
+      <button class="btn btn-sm" id="btnImportD">⬆️ Restaurar</button>
+    </div>
+  </div>
+</aside>
 
 <!-- ================= AJUDA ================= -->
 <div class="modal-bg" id="helpModal">
@@ -34,17 +94,19 @@
   <button class="close" id="btnHelpClose">✕</button>
   <h3>❓ Como usar</h3>
   <div class="msub">Cadastrar estoque → montar oferta → salvar → vender</div>
+  <div class="step"><div class="n">☰</div><div class="txt"><span class="t">Navegação</span>
+   Use o <b>menu ☰</b> no topo ou a <b>barra inferior</b> para trocar de tela.</div></div>
   <div class="step"><div class="n r">🔴</div><div class="txt"><span class="t">Selecionar sem estar no estoque</span>
    Pegou a figurinha na mão mas ainda não cadastrou? <b>Pode clicar normalmente</b>.
-   Ela fica com <b>fundo vermelho + borda verde e ✔</b>. Ao confirmar a venda, essas aparecem
-   separadas e você escolhe se quer <b>cadastrá-las no estoque automaticamente</b>.</div></div>
+   Ela fica com <b>fundo vermelho + borda verde e ✔</b>. Ao confirmar a venda, você escolhe se
+   quer <b>cadastrá-las no estoque automaticamente</b>.</div></div>
   <div class="step"><div class="n g">🔓</div><div class="txt"><span class="t">Interruptor "Conferir estoque"</span>
    Ligar/desligar <b>nunca apaga</b> o que você já marcou.</div></div>
   <div class="step"><div class="n r">🔎</div><div class="txt"><span class="t">Procuradas</span>
-   Cada lista processada em <b>📥 Oferta</b> registra o que faltou. Na aba <b>🔎 Procuradas</b>
-   há o ranking de demanda, com <b>quem</b> pediu, e a lista <b>"PROCURO"</b> pronta.</div></div>
+   Cada lista processada em <b>Nova Oferta</b> registra o que faltou, com <b>quem</b> pediu,
+   e gera a lista <b>"PROCURO"</b> pronta para grupos de troca.</div></div>
   <div class="step"><div class="n p">⭐</div><div class="txt"><span class="t">Craques</span>
-   Destacados em roxo com ⭐ e o sobrenome no card. Edite a tabela <code>ACES</code> em <code>js/data.js</code>.</div></div>
+   Roxo com ⭐ e o sobrenome no card. Edite a tabela <code>ACES</code> em <code>js/data.js</code>.</div></div>
   <div class="step"><div class="n g">✨</div><div class="txt"><span class="t">Brilhantes</span>
    A <b>primeira de cada seleção</b> e <b>todas</b> de <b>🏆 FWC (00–19)</b> e <b>⭐ Históricas</b>.</div></div>
   <div class="step"><div class="n">1</div><div class="txt"><span class="t">📦 Estoque</span>
@@ -54,7 +116,8 @@
    Aceita <b>inline</b> (<code>POR10, POR-14</code>) e <b>agrupado</b> (<code>BIH 🇧🇦: 5, 13</code>).</div></div>
   <div class="step"><div class="n b">↩️</div><div class="txt"><span class="t">Cancelar Venda</span>
    Devolve as figurinhas ao estoque e recria o orçamento.</div></div>
-  <div class="tip">💡 Tudo salvo no navegador. Use <b>Backup (JSON)</b>. Atalhos: <kbd>?</kbd> abre, <kbd>Esc</kbd> fecha.</div>
+  <div class="tip">💡 Tudo salvo no navegador. Use <b>Backup (JSON)</b> no menu.
+   Atalhos: <kbd>?</kbd> ajuda · <kbd>M</kbd> menu · <kbd>Esc</kbd> fecha.</div>
  </div>
 </div>
 
@@ -162,7 +225,7 @@
   <h2>🔎 Procuradas</h2>
   <div class="subtitle">O que te pediram e você <b>não tem</b> — use para trocar e aumentar o estoque</div>
   <div class="counter" id="demCounter">—</div>
-  <div class="hint">Cada lista processada em <b>📥 Oferta</b> alimenta este radar automaticamente.<br>
+  <div class="hint">Cada lista processada em <b>Nova Oferta</b> alimenta este radar automaticamente.<br>
   Clique em <b>+1</b> quando conseguir a figurinha: ela vai para o estoque e sai desta lista.</div>
   <div class="acebox" id="demAces"></div>
   <div class="search-box"><input type="text" id="searchDem" placeholder="🔍 Filtrar por seleção, código ou pessoa..."></div>
@@ -246,6 +309,15 @@
   <div id="testSummary"></div>
   <div id="testResults"><div class="empty">Clique em <b>Executar Testes</b> para começar.</div></div>
 </div>
+
+<!-- ================= BARRA INFERIOR ================= -->
+<nav class="tabbar" id="tabbar">
+  <button class="tab active" data-view="estoque"><i>📦</i><span>Estoque</span></button>
+  <button class="tab" data-view="oferta"><i>📥</i><span>Oferta</span></button>
+  <button class="tab" data-view="procuradas"><i>🔎</i><span>Procuro</span><em class="tab-badge hidden" id="tabPillDem"></em></button>
+  <button class="tab" data-view="orcamentos"><i>💾</i><span>Orçam.</span></button>
+  <button class="tab" data-view="vendas"><i>💰</i><span>Vendas</span></button>
+</nav>
 
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>

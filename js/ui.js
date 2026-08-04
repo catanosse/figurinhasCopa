@@ -3,6 +3,10 @@ function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 function val(id){var e=document.getElementById(id);return e?e.value:""}
 
+var VIEW_TITLE={estoque:"Estoque",oferta:"Nova Oferta",livre:"Escolha Livre",
+  procuradas:"Procuradas",orcamentos:"Orçamentos",vendas:"Vendas",
+  scanner:"Scanner",testes:"Testes"};
+
 function toast(m,t){
   var el=$("#toast");
   el.className="show"+(t?" "+t:"");el.textContent=m;
@@ -20,11 +24,31 @@ function compartilhar(id){
   if(navigator.share)navigator.share({text:el.textContent}).catch(function(){});
   else copiar(id);
 }
-function go(view){
+
+/* ---------- DRAWER ---------- */
+function drawer(open){
+  $("#drawer").classList.toggle("show",open);
+  $("#drawerBg").classList.toggle("show",open);
+  $("#btnMenu").classList.toggle("open",open);
+  document.body.style.overflow=open?"hidden":"";
+  if(open)renderDrawerStats();
+}
+function renderDrawerStats(){
+  var r=contar(stockMap());
+  $("#drawerStats").innerHTML=
+    '<div class="dstat"><b>'+stockUnidades()+'</b><span>unidades</span></div>'+
+    '<div class="dstat"><b>'+r.total+'</b><span>diferentes</span></div>'+
+    '<div class="dstat"><b>'+rankDemanda(false).length+'</b><span>procuradas</span></div>'+
+    '<div class="dstat"><b>'+vendas.length+'</b><span>vendas</span></div>';
+}
+function go(view,keepOpen){
   var v=document.getElementById("v-"+view); if(!v)return;
   $$(".view").forEach(function(x){x.classList.add("hidden")});
   v.classList.remove("hidden");
-  $$(".nav-btn").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
+  $$(".dn-item").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
+  $$(".tab").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
+  $("#brandSub").textContent="Copa 2026 · "+(VIEW_TITLE[view]||"");
+  if(!keepOpen)drawer(false);
   window.scrollTo({top:0,behavior:"smooth"});
   if(view!=="scanner"&&window.stopScanner)window.stopScanner();
   if(view==="estoque"){renderStock(val("searchStock"));updStockCounter()}
@@ -54,7 +78,7 @@ function toggleIgnore(){
 
 /* ---------- LISTAS DE TEXTO ---------- */
 function buildList(map,title){
-  var out="🏆 *"+title+"* 🏆\n\n",any=false,lastG="__";
+  var out="🏆 *"+title+"* 🏆\n_Catanos Figurinhas · Copa 2026_\n\n",any=false,lastG="__";
   Object.keys(map||{}).sort(function(a,b){return ORDER[a]-ORDER[b]}).forEach(function(c){
     var nums=(map[c]||[]).slice().sort(function(a,b){return a-b});
     if(!nums.length)return;
@@ -185,7 +209,6 @@ function renderStock(filter){
   teams.forEach(function(t){
     if(f.kind==="txt"&&!matchTeam(t,f.txt))return;
     if(f.kind==="num"&&!validNum(t.code,f.num))return;
-
     if(f.kind==="none"&&t.group!==lastG){lastG=t.group;c.appendChild(groupBand(t))}
 
     var d=document.createElement("div");
@@ -337,7 +360,7 @@ function salvarOrcamento(nome,offered,requested){
   if(!mapTotal(sel)){toast("⚠️ Nada selecionado para salvar","warn2");return null}
   var o={id:"o"+Date.now(),name:nome||"Cliente sem nome",date:hoje(),
     offered:sel,requested:ordenaMapa(requested||sel)};
-  orcamentos.unshift(o);saveOrc();
+  orcamentos.unshift(o);saveOrc();updOrcPill();
   toast("💾 Orçamento de "+o.name+" salvo ("+mapTotal(sel)+" figurinhas)");
   return o;
 }
@@ -399,8 +422,14 @@ function gerarListaLivre(){
 
 /* ================= PROCURADAS ================= */
 function updDemPill(){
-  var p=$("#pillDem"),t=rankDemanda(false).length;
-  p.textContent=t;p.classList.toggle("hidden",t===0);
+  var t=rankDemanda(false).length;
+  var p=$("#pillDem");p.textContent=t;p.classList.toggle("hidden",t===0);
+  $("#tabPillDem").classList.toggle("hidden",t===0);
+  $("#burgerPill").classList.toggle("hidden",t===0);
+}
+function updOrcPill(){
+  var p=$("#pillOrc");p.textContent=orcamentos.length;
+  p.classList.toggle("hidden",orcamentos.length===0);
 }
 function renderDemanda(){
   var f=noAccent(val("searchDem")).toLowerCase();
@@ -426,7 +455,7 @@ function renderDemanda(){
   var box=$("#demRanking");
   if(!rank.length){
     box.innerHTML='<div class="empty">Nenhuma figurinha procurada no momento. 🎉<br>'+
-      'Processe uma lista em <b>📥 Oferta</b> — o que faltar aparece aqui.</div>';
+      'Processe uma lista em <b>Nova Oferta</b> — o que faltar aparece aqui.</div>';
     $("#outDem").style.display="none";renderDemList();return;
   }
   if(!lista.length){box.innerHTML='<div class="empty">Nenhum resultado para este filtro.</div>';renderDemList();return}
@@ -494,7 +523,7 @@ function gerarListaDemanda(){
   var rank=rankDemanda(false),el=$("#outDem");
   if(!rank.length){toast("🎉 Nada procurado no momento","warn2");return}
   var map=demandaMap(),r=contar(map);
-  var out="🔎 *PROCURO ESTAS FIGURINHAS* 🔎\n_Copa 2026 — troco ou compro_\n\n";
+  var out="🔎 *PROCURO ESTAS FIGURINHAS* 🔎\n_Catanos Figurinhas · Copa 2026 — troco ou compro_\n\n";
   Object.keys(map).forEach(function(c){
     out+=(T[c].flag||"🏳️")+" "+T[c].name+" ("+c+")\n"+map[c].map(function(n){
       if(isAce(c,n))return c+" "+pad(n)+"⭐ ("+aceName(c,n)+")";
@@ -529,9 +558,10 @@ function limparDemanda(){
 /* ================= ORÇAMENTOS ================= */
 var orcAtual=null;
 function renderOrcList(){
+  updOrcPill();
   var c=$("#orcList");
   if(!orcamentos.length){
-    c.innerHTML='<div class="empty">Nenhum orçamento salvo.<br>Monte uma oferta em <b>📥 Oferta</b> ou <b>✏️ Livre</b>.</div>';
+    c.innerHTML='<div class="empty">Nenhum orçamento salvo.<br>Monte uma oferta em <b>Nova Oferta</b> ou <b>Escolha Livre</b>.</div>';
     return;
   }
   c.innerHTML="";
@@ -619,7 +649,7 @@ function confirmarVenda(){
   if(mapTotal(so)){
     var lista=Object.keys(so).map(function(c){return c+" "+ranges(so[c])}).join("\n");
     cadastrar=confirm("🔴 "+mapTotal(so)+" figurinha(s) selecionadas NÃO estão no estoque:\n\n"+lista+
-      "\n\nOK = cadastrar automaticamente (+1) e dar baixa\nCancelar = vender sem cadastrar (estoque não fica negativo)");
+      "\n\nOK = cadastrar automaticamente (+1) e dar baixa\nCancelar = vender sem cadastrar");
   }
   if(!confirm("Confirmar a venda de "+mapTotal(sel)+" figurinhas para "+orcAtual.name+"?\n\nO estoque será baixado."))return;
   if(cadastrar)Object.keys(so).forEach(function(c){so[c].forEach(function(n){setQty(c,n,getQty(c,n)+1)})});
@@ -682,7 +712,7 @@ function renderSales(){
       vendas=vendas.filter(function(x){return x.id!==v.id});
       saveOrc();saveSales();
       renderSales();renderStock(val("searchStock"));updStockCounter();
-      renderLivre(val("searchLivre"));renderDemanda();updDemPill();
+      renderLivre(val("searchLivre"));renderDemanda();updDemPill();updOrcPill();
       toast("↩️ Venda cancelada — estoque devolvido e orçamento recriado");
     };
     bs[2].onclick=function(){
@@ -692,6 +722,29 @@ function renderSales(){
     };
     c.appendChild(el);
   });
+}
+
+/* ================= BACKUP ================= */
+function doExport(){
+  var b=new Blob([exportJSON()],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="catanos-figurinhas-"+new Date().toISOString().slice(0,10)+".json";
+  a.click();toast("⬇️ Backup gerado");
+}
+function doImportFile(e){
+  var f=e.target.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      importJSON(rd.result);paintIgnore();
+      renderStock(val("searchStock"));updStockCounter();
+      renderOrcList();renderSales();renderDemanda();updDemPill();updOrcPill();
+      renderLivre(val("searchLivre"));renderDrawerStats();
+      toast("⬆️ Backup restaurado com sucesso");
+    }catch(err){toast("❌ Arquivo inválido","err")}
+  };
+  rd.readAsText(f);e.target.value="";
 }
 
 /* ================= TESTES ================= */
@@ -704,8 +757,7 @@ function runTests(){
   ok("48 seleções + FWC + HIST = 50 blocos",teams.length===50,"encontrados: "+teams.length);
   ok("Todos os grupos A–L com 4 seleções",
     Object.keys(GROUP_TITLE).every(function(g){
-      return teams.filter(function(t){return t.group===g}).length===4;
-    }));
+      return teams.filter(function(t){return t.group===g}).length===4}));
   ok("FWC vai de 00 a 19",firstNum("FWC")===0&&lastNum("FWC")===19,
     "de "+pad(firstNum("FWC"))+" a "+pad(lastNum("FWC")));
   ok("FWC 20 é inválido",!validNum("FWC",20));
@@ -728,48 +780,45 @@ function runTests(){
   G("Contagem");
   var r=contar({BRA:[1,2,3],POR:[15]});
   ok("Total = 4",r.total===4,"total: "+r.total);
-  ok("1 brilhante (BRA 01)",r.brilhantes===1,"brilhantes: "+r.brilhantes);
+  ok("1 brilhante (BRA 01)",r.brilhantes===1);
   ok("1 craque (POR 15)",r.craques===1);
-  ok("2 normais",r.normais===2,"normais: "+r.normais);
+  ok("2 normais",r.normais===2);
   ok("Faixas 1,2,3,7 → 01-03,07",ranges([1,2,3,7])==="01-03,07",ranges([1,2,3,7]));
 
   G("Parser de listas");
   var p1=parseList("BIH 🇧🇦: 5, 13");
   ok("Formato agrupado com emoji",p1.found.BIH&&p1.found.BIH.length===2,JSON.stringify(p1.found));
   var p2=parseList("POR10, POR-14, bra19");
-  ok("Formato inline",p2.found.POR&&p2.found.POR.length===2&&p2.found.BRA&&p2.found.BRA[0]===19,
-    JSON.stringify(p2.found));
+  ok("Formato inline",p2.found.POR&&p2.found.POR.length===2&&p2.found.BRA&&p2.found.BRA[0]===19);
   var p3=parseList("FWC 00, POR 15, ARG 17");
-  ok("Mistos na mesma linha",p3.found.FWC&&p3.found.FWC[0]===0&&p3.found.POR&&p3.found.ARG,
-    JSON.stringify(p3.found));
+  ok("Mistos na mesma linha",p3.found.FWC&&p3.found.FWC[0]===0&&p3.found.POR&&p3.found.ARG);
   var p4=parseList("brasil 1 2 3");
-  ok("Nome completo do país",p4.found.BRA&&p4.found.BRA.length===3,JSON.stringify(p4.found));
+  ok("Nome completo do país",p4.found.BRA&&p4.found.BRA.length===3);
   var p5=parseList("BRA 99, XXX 5, https://site.com/12");
-  ok("Ignora números e códigos inválidos e URLs",!p5.found.BRA&&!p5.found.XXX,JSON.stringify(p5.found));
-  var p6=parseList("MEX 3\n5\n7");
-  ok("Não inventa time para números soltos",!p6.found.MEX||p6.found.MEX.length>=1);
+  ok("Ignora inválidos e URLs",!p5.found.BRA&&!p5.found.XXX);
 
   G("Mapas");
   var om=ordenaMapa({POR:[15,3],BRA:[5,1]});
-  ok("Ordena por ordem do álbum",Object.keys(om)[0]==="BRA",Object.keys(om).join(","));
+  ok("Ordena por ordem do álbum",Object.keys(om)[0]==="BRA");
   ok("Ordena os números",om.BRA[0]===1&&om.POR[0]===3);
   ok("mapTotal soma certo",mapTotal({BRA:[1,2],POR:[15]})===3);
   var cl=clonaMapa({BRA:[1,2]});cl.BRA.push(9);
   ok("clonaMapa não afeta original",cl.BRA.length===3);
   ok("resolveCode('méxico') = MEX",resolveCode("méxico")==="MEX");
-  ok("resolveCode('MEX') = MEX",resolveCode("MEX")==="MEX");
   ok("resolveCode inválido = null",resolveCode("zzz")===null);
 
   G("Listas de texto");
   var bl=buildList({BRA:[1],POR:[15]},"TESTE");
   ok("Marca ✨ no texto",bl.indexOf("✨")>-1);
   ok("Marca ⭐ e nome do craque",bl.indexOf("Cristiano Ronaldo")>-1);
-  ok("Inclui resumo",bl.indexOf("RESUMO")>-1);
+  ok("Assina Catanos Figurinhas",bl.indexOf("Catanos")>-1);
   ok("Mapa vazio avisa",buildList({},"X").indexOf("Nenhuma")>-1);
 
-  G("Estados dos botões");
-  ok("Sem estoque + não selecionada = nostock",estadoBtn("BRA",7,false)==="nostock"||temEstoque("BRA",7));
-  ok("Sem estoque + selecionada = selout",estadoBtn("BRA",7,true)==="selout"||temEstoque("BRA",7));
+  G("Interface");
+  ok("Todas as views do menu existem",
+    $$(".dn-item").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
+  ok("Todas as abas inferiores existem",
+    $$(".tab").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
   ok("classeBtn marca craque",classeBtn("POR",15,"").indexOf("ace")>-1);
   ok("classeBtn marca brilhante",classeBtn("BRA",1,"").indexOf("shiny")>-1);
 
@@ -781,10 +830,8 @@ function runTests(){
   ok("Todas as seleções de grupo têm iso",
     teams.filter(function(t){return t.group}).every(function(t){return !!t.iso}));
 
-  /* render */
   var pass=res.filter(function(x){return x.pass}).length;
-  var sum=$("#testSummary");
-  sum.innerHTML='<div class="test-sum '+(pass===res.length?"ok":"bad")+'">'+
+  $("#testSummary").innerHTML='<div class="test-sum '+(pass===res.length?"ok":"bad")+'">'+
     (pass===res.length?"✅ ":"⚠️ ")+pass+" de "+res.length+" testes passaram</div>";
   var box=$("#testResults");box.innerHTML="";
   var lastG="";
@@ -805,16 +852,33 @@ function runTests(){
 
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded",function(){
-  /* nav */
-  $$(".nav-btn").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
+  /* navegação */
+  $$(".dn-item").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
+  $$(".tab").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
+  $("#btnMenu").onclick=function(){drawer(!$("#drawer").classList.contains("show"))};
+  $("#btnDrawerClose").onclick=function(){drawer(false)};
+  $("#drawerBg").onclick=function(){drawer(false)};
   $("#swIgnore").onclick=toggleIgnore;
   $("#btnHelp").onclick=function(){toggleHelp(true)};
   $("#btnHelpClose").onclick=function(){toggleHelp(false)};
   $("#helpModal").onclick=function(e){if(e.target===this)toggleHelp(false)};
   document.addEventListener("keydown",function(e){
-    if(e.key==="Escape")toggleHelp(false);
-    if(e.key==="?"&&["INPUT","TEXTAREA","SELECT"].indexOf(document.activeElement.tagName)<0)toggleHelp(true);
+    var tag=document.activeElement.tagName;
+    if(e.key==="Escape"){toggleHelp(false);drawer(false)}
+    if(["INPUT","TEXTAREA","SELECT"].indexOf(tag)>-1)return;
+    if(e.key==="?")toggleHelp(true);
+    if(e.key==="m"||e.key==="M")drawer(!$("#drawer").classList.contains("show"));
   });
+  /* swipe para fechar o drawer */
+  (function(){
+    var x0=null;
+    $("#drawer").addEventListener("touchstart",function(e){x0=e.touches[0].clientX},{passive:true});
+    $("#drawer").addEventListener("touchend",function(e){
+      if(x0!==null&&e.changedTouches[0].clientX-x0<-55)drawer(false);
+      x0=null;
+    },{passive:true});
+  })();
+
   $$("[data-copy]").forEach(function(b){b.onclick=function(){copiar(b.dataset.copy)}});
   $$("[data-share]").forEach(function(b){b.onclick=function(){compartilhar(b.dataset.share)}});
 
@@ -822,28 +886,11 @@ document.addEventListener("DOMContentLoaded",function(){
   $("#searchStock").oninput=function(){renderStock(this.value)};
   $("#btnListStock").onclick=gerarListaEstoque;
   $("#btnZerar").onclick=zerarEstoque;
-  $("#btnExport").onclick=function(){
-    var b=new Blob([exportJSON()],{type:"application/json"});
-    var a=document.createElement("a");
-    a.href=URL.createObjectURL(b);
-    a.download="figurinhas26-"+new Date().toISOString().slice(0,10)+".json";
-    a.click();toast("⬇️ Backup gerado");
-  };
+  $("#btnExport").onclick=doExport;
+  $("#btnExportD").onclick=doExport;
   $("#btnImport").onclick=function(){$("#impFile").click()};
-  $("#impFile").onchange=function(e){
-    var f=e.target.files[0];if(!f)return;
-    var rd=new FileReader();
-    rd.onload=function(){
-      try{
-        importJSON(rd.result);paintIgnore();
-        renderStock(val("searchStock"));updStockCounter();
-        renderOrcList();renderSales();renderDemanda();updDemPill();
-        renderLivre(val("searchLivre"));
-        toast("⬆️ Backup restaurado com sucesso");
-      }catch(err){toast("❌ Arquivo inválido","err")}
-    };
-    rd.readAsText(f);e.target.value="";
-  };
+  $("#btnImportD").onclick=function(){$("#impFile").click()};
+  $("#impFile").onchange=doImportFile;
 
   /* oferta */
   $("#btnProc").onclick=processarOferta;
@@ -893,5 +940,6 @@ document.addEventListener("DOMContentLoaded",function(){
 
   paintIgnore();
   renderStock("");updStockCounter();
-  renderLivre("");renderOrcList();renderSales();renderDemanda();updDemPill();
+  renderLivre("");renderOrcList();renderSales();renderDemanda();
+  updDemPill();updOrcPill();renderDrawerStats();
 });

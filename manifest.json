@@ -1,7 +1,7 @@
 {
-  "name": "Figurinhas Copa 2026 — Gestão",
-  "short_name": "Figurinhas26",
-  "description": "Controle de estoque, ofertas, procuradas, orçamentos e vendas de figurinhas da Copa 2026",
+  "name": "Catanos Figurinhas — Copa 2026",
+  "short_name": "Catanos",
+  "description": "Gestão de estoque, ofertas, procuradas, orçamentos e vendas de figurinhas",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
