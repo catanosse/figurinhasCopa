@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Figurinhas Copa 2026 — Gestão</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-inner">
+  <button class="nav-btn active" data-view="estoque">📦 Estoque</button>
+  <button class="nav-btn" data-view="oferta">📤 Oferta</button>
+  <button class="nav-btn" data-view="importar">📥 Importar</button>
+  <button class="nav-btn" data-view="procuradas">🎯 Procuradas</button>
+  <button class="nav-btn" data-view="orcamento">🧾 Orçamento</button>
+  <button class="nav-btn" data-view="vendas">💰 Vendas</button>
+  <button class="nav-btn" data-view="mobile">📷 Scanner</button>
+</div></div>
+
+<!-- ESTOQUE -->
+<div class="wrapper view" id="v-estoque">
+  <h1>Estoque <span class="pill" id="stockCounter">0</span></h1>
+  <div class="row">
+    <input id="qFilter" placeholder="Filtrar time ou sigla...">
+    <label class="chk"><input type="checkbox" id="onlyHave"> só com repetidas</label>
+    <button class="btn danger" id="btnClear">Zerar tudo</button>
+  </div>
+  <div id="stockGrid"></div>
+</div>
+
+<!-- OFERTA -->
+<div class="wrapper view hidden" id="v-oferta">
+  <h1>Gerar oferta</h1>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="ofMin2" checked> só qtd ≥ 2</label>
+    <label class="chk"><input type="checkbox" id="ofRange" checked> agrupar faixas (1-5)</label>
+    <label class="chk"><input type="checkbox" id="ofAce" checked> marcar craques ⭐</label>
+    <button class="btn" id="btnGenOffer">Gerar</button>
+    <button class="btn" id="btnCopyOffer">Copiar</button>
+  </div>
+  <textarea id="offerOut" rows="16" placeholder="A oferta aparece aqui..."></textarea>
+</div>
+
+<!-- IMPORTAR -->
+<div class="wrapper view hidden" id="v-importar">
+  <h1>Importar lista livre</h1>
+  <p class="hint">Cole qualquer formato: <code>MEX 3,5,7-9 / ARG 1 2 3</code>. Números soltos usam o time do último cabeçalho.</p>
+  <textarea id="impIn" rows="10" placeholder="MEX 3,5,7-9&#10;ARG 01 02 15"></textarea>
+  <div class="row">
+    <select id="impMode">
+      <option value="add">Somar ao estoque</option>
+      <option value="set">Definir quantidade 1</option>
+      <option value="want">Enviar para Procuradas</option>
+    </select>
+    <button class="btn" id="btnImport">Processar</button>
+  </div>
+  <div class="scan-log" id="impLog"></div>
+</div>
+
+<!-- PROCURADAS -->
+<div class="wrapper view hidden" id="v-procuradas">
+  <h1>Procuradas <span class="pill" id="wantCounter">0</span></h1>
+  <div class="row">
+    <input id="wantIn" placeholder="Ex: MEX 3,5 ARG 12">
+    <button class="btn" id="btnWantAdd">Adicionar</button>
+    <button class="btn" id="btnWantCopy">Copiar lista</button>
+    <button class="btn danger" id="btnWantClear">Limpar</button>
+  </div>
+  <div id="wantList" class="chips"></div>
+  <h2>Casamentos com a lista importada</h2>
+  <div class="scan-log" id="matchLog">Importe uma lista para comparar.</div>
+</div>
+
+<!-- ORÇAMENTO -->
+<div class="wrapper view hidden" id="v-orcamento">
+  <h1>Orçamento</h1>
+  <div class="row">
+    <input id="orcName" placeholder="Cliente">
+    <input id="orcQty" type="number" min="1" value="1" placeholder="Qtd figurinhas">
+    <input id="orcUnit" type="number" step="0.01" value="0.50" placeholder="Preço unit.">
+    <input id="orcFrete" type="number" step="0.01" value="0" placeholder="Frete">
+    <button class="btn" id="btnOrcAdd">Salvar</button>
+  </div>
+  <div class="scan-big" id="orcTotal">R$ 0,00</div>
+  <table class="tb" id="orcTable"></table>
+</div>
+
+<!-- VENDAS -->
+<div class="wrapper view hidden" id="v-vendas">
+  <h1>Vendas <span class="pill" id="vendTotal">R$ 0,00</span></h1>
+  <div class="row">
+    <input id="vdName" placeholder="Comprador">
+    <input id="vdItems" placeholder="Itens (ex: MEX 3,5)">
+    <input id="vdValue" type="number" step="0.01" placeholder="Valor">
+    <label class="chk"><input type="checkbox" id="vdBaixa" checked> dar baixa no estoque</label>
+    <button class="btn" id="btnVdAdd">Registrar</button>
+  </div>
+  <table class="tb" id="vendTable"></table>
+</div>
+
+<!-- SCANNER -->
+<div class="wrapper view hidden" id="v-mobile">
+  <h1>Scanner (OCR)</h1>
+  <div class="scan-cfg">
+    <select id="scanTeam"></select>
+    <label>intervalo <input type="number" id="scanEvery" value="1500" min="600" step="100"></label>
+    <label class="chk"><input type="checkbox" id="scanAuto" checked> auto-adicionar</label>
+  </div>
+  <div class="row">
+    <button class="btn" id="btnScanStart">▶ Iniciar câmera</button>
+    <button class="btn" id="btnScanShot">📸 Ler agora</button>
+    <button class="btn danger" id="btnScanStop">⏹ Parar</button>
+  </div>
+  <div class="scan-wrap">
+    <video id="scanVideo" playsinline muted></video>
+    <div class="scan-mask"></div>
+  </div>
+  <div class="scan-big" id="scanBig">—</div>
+  <div class="scan-log" id="scanLog"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="js/scanner.js"></script>
+</body>
+</html>
