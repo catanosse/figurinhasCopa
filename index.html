@@ -46,7 +46,7 @@
       <span class="dn-ic">📦</span><span class="dn-tx"><b>Estoque</b><i>Cadastrar e contar repetidas</i></span>
     </button>
     <button class="dn-item" data-view="scanner">
-      <span class="dn-ic">📷</span><span class="dn-tx"><b>Scanner</b><i>Ler o número pela câmera</i></span>
+      <span class="dn-ic">📷</span><span class="dn-tx"><b>Scanner</b><i>Ler o código pela câmera</i></span>
     </button>
 
     <div class="dn-sec">Negociação</div>
@@ -80,7 +80,7 @@
     <div class="switch" id="swIgnore" title="Liga/desliga a conferência — suas seleções são preservadas">
       <span class="track"></span><span id="swLabel">Conferir estoque</span>
     </div>
-    <div class="dh-sub" style="margin-top:9px">Dados salvos neste navegador · faça backup 👇</div>
+    <div class="dh-sub" style="margin-top:9px">Backup local do arquivo de dados</div>
     <div class="drawer-foot-btns">
       <button class="btn btn-sm" id="btnExportD">⬇️ Backup</button>
       <button class="btn btn-sm" id="btnImportD">⬆️ Restaurar</button>
@@ -96,6 +96,12 @@
   <div class="msub">Cadastrar estoque → montar oferta → salvar → vender</div>
   <div class="step"><div class="n">☰</div><div class="txt"><span class="t">Navegação</span>
    Use o <b>menu ☰</b> no topo ou a <b>barra inferior</b> para trocar de tela.</div></div>
+  <div class="step"><div class="n b">☁️</div><div class="txt"><span class="t">Nuvem</span>
+   Faça login no card azul do <b>Estoque</b> para sincronizar celular e PC automaticamente.
+   Sem login, os dados ficam só neste navegador.</div></div>
+  <div class="step"><div class="n b">📷</div><div class="txt"><span class="t">Scanner</span>
+   Aponte para o <b>verso</b> da figurinha, onde está o código. Ele detecta
+   <b>sigla e número sozinho</b>. Se ficar em dúvida, mostra as 3 opções mais prováveis.</div></div>
   <div class="step"><div class="n r">🔴</div><div class="txt"><span class="t">Selecionar sem estar no estoque</span>
    Pegou a figurinha na mão mas ainda não cadastrou? <b>Pode clicar normalmente</b>.
    Ela fica com <b>fundo vermelho + borda verde e ✔</b>. Ao confirmar a venda, você escolhe se
@@ -116,8 +122,7 @@
    Aceita <b>inline</b> (<code>POR10, POR-14</code>) e <b>agrupado</b> (<code>BIH 🇧🇦: 5, 13</code>).</div></div>
   <div class="step"><div class="n b">↩️</div><div class="txt"><span class="t">Cancelar Venda</span>
    Devolve as figurinhas ao estoque e recria o orçamento.</div></div>
-  <div class="tip">💡 Tudo salvo no navegador. Use <b>Backup (JSON)</b> no menu.
-   Atalhos: <kbd>?</kbd> ajuda · <kbd>M</kbd> menu · <kbd>Esc</kbd> fecha.</div>
+  <div class="tip">💡 Atalhos: <kbd>?</kbd> ajuda · <kbd>M</kbd> menu · <kbd>Esc</kbd> fecha.</div>
  </div>
 </div>
 
@@ -280,24 +285,43 @@
 
 <!-- ================= SCANNER ================= -->
 <div class="wrapper view hidden" id="v-scanner">
-  <h2>📷 Scanner (OCR)</h2>
-  <div class="subtitle">Aponte a câmera para o número da figurinha — precisa de HTTPS</div>
-  <div class="scan-cfg">
-    <select id="scanTeam"></select>
-    <label>intervalo <input type="number" id="scanEvery" value="1500" min="600" step="100"></label>
-    <label class="chk" style="margin:0"><input type="checkbox" id="scanAuto" checked> auto +1</label>
+  <h2>📷 Scanner de Códigos</h2>
+  <div class="subtitle">Aponte para o <b>verso</b> da figurinha — o código é detectado sozinho</div>
+
+  <div class="scan-wrap">
+    <video id="scanVideo" playsinline muted></video>
+    <div class="scan-roi"><span class="roi-c tl"></span><span class="roi-c tr"></span>
+      <span class="roi-c bl"></span><span class="roi-c br"></span>
+      <span class="roi-tip">encaixe o código aqui</span></div>
+    <div class="scan-flash" id="scanFlash"></div>
   </div>
-  <div class="actions" style="margin:0 0 12px">
+
+  <div class="scan-result" id="scanResult">
+    <div class="sr-idle">Toque em <b>Iniciar</b> e aponte para o código</div>
+  </div>
+
+  <div class="actions" style="margin:0 0 10px">
     <button class="btn green" id="btnScanStart">▶️ Iniciar</button>
-    <button class="btn" id="btnScanShot">📸 Ler agora</button>
+    <button class="btn" id="btnScanShot">🔍 Ler agora</button>
     <button class="btn red" id="btnScanStop">⏹️ Parar</button>
   </div>
-  <div class="scan-wrap"><video id="scanVideo" playsinline muted></video><div class="scan-mask"></div></div>
-  <div class="scan-big" id="scanBig">—</div>
-  <div class="actions" style="margin:0 0 12px">
-    <input type="text" id="scanManual" placeholder="nº" style="max-width:90px;text-align:center">
-    <button class="btn green btn-sm" id="btnScanManual">+1 manual</button>
+
+  <div class="scan-opts">
+    <label class="chk" style="margin:0"><input type="checkbox" id="scanAuto" checked> leitura contínua</label>
+    <label class="chk" style="margin:0"><input type="checkbox" id="scanSound" checked> som/vibrar</label>
+    <label class="chk" style="margin:0"><input type="checkbox" id="scanLockTeam"> travar seleção atual</label>
   </div>
+
+  <div class="scan-session" id="scanSession"></div>
+
+  <div class="divider"></div>
+  <h2 style="font-size:16px">✍️ Entrada manual</h2>
+  <div class="subtitle">Código ilegível? Digite: <code>BRA 5</code> · <code>fwc00</code> · <code>arg17</code></div>
+  <div class="actions" style="margin:0 0 12px">
+    <input type="text" id="scanManual" placeholder="ex: BRA 5" style="max-width:150px;text-align:center">
+    <button class="btn green btn-sm" id="btnScanManual">➕ Adicionar</button>
+  </div>
+
   <div class="out" id="scanLog" style="display:block">Pronto.</div>
 </div>
 
@@ -313,9 +337,9 @@
 <!-- ================= BARRA INFERIOR ================= -->
 <nav class="tabbar" id="tabbar">
   <button class="tab active" data-view="estoque"><i>📦</i><span>Estoque</span></button>
+  <button class="tab" data-view="scanner"><i>📷</i><span>Scanner</span></button>
   <button class="tab" data-view="oferta"><i>📥</i><span>Oferta</span></button>
   <button class="tab" data-view="procuradas"><i>🔎</i><span>Procuro</span><em class="tab-badge hidden" id="tabPillDem"></em></button>
-  <button class="tab" data-view="orcamentos"><i>💾</i><span>Orçam.</span></button>
   <button class="tab" data-view="vendas"><i>💰</i><span>Vendas</span></button>
 </nav>
 
@@ -324,7 +348,6 @@
 <script src="js/ui.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/cloud.js"></script>
-<script src="js/ui.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="js/scanner.js"></script>
 </body>

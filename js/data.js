@@ -1,5 +1,5 @@
 /* ======================================================
-   DADOS — ordem oficial do álbum: FWC (00–19) → A..L → HIST
+   DADOS — ordem do álbum: FWC (00–19) → grupos A..L → HIST
    ====================================================== */
 var teams=[
  {code:"FWC",name:"FIFA World Cup 26",flag:"🏆",iso:null,qty:20,group:null,allShiny:true,firstZero:true},
@@ -73,7 +73,7 @@ teams.forEach(function(t,i){T[t.code]=t;ORDER[t.code]=i});
 var GROUP_TITLE={A:"Grupo A",B:"Grupo B",C:"Grupo C",D:"Grupo D",E:"Grupo E",F:"Grupo F",
  G:"Grupo G",H:"Grupo H",I:"Grupo I",J:"Grupo J",K:"Grupo K",L:"Grupo L"};
 
-/* ---------- BANDEIRAS (imagem, com fallback) ---------- */
+/* ---------- BANDEIRAS ---------- */
 function flagURL(code,w){
   var t=T[code]; if(!t||!t.iso)return null;
   w=w||40; return "https://flagcdn.com/"+w+"x"+Math.round(w*0.75)+"/"+t.iso+".png";
@@ -125,7 +125,7 @@ Object.keys(ACES_BY_TEAM).forEach(function(c){
 function firstOf(t){return t.firstZero?0:1}
 function numsOf(t){
   var a=[],ini=firstOf(t);
-  for(var i=ini;i<ini+t.qty;i++)a.push(i);   /* FWC: 0..19 · outros: 1..20 */
+  for(var i=ini;i<ini+t.qty;i++)a.push(i);
   return a;
 }
 function firstNum(code){return T[code]?firstOf(T[code]):1}

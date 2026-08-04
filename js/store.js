@@ -165,7 +165,7 @@ function demandaDe(code,num){
 
 /* ---------- BACKUP ---------- */
 function exportJSON(){
-  return JSON.stringify({app:"figurinhas26",v:3,date:new Date().toISOString(),
+  return JSON.stringify({app:"catanos-figurinhas",v:4,date:new Date().toISOString(),
     stock:stock,orcamentos:orcamentos,vendas:vendas,demanda:demanda,ignoreStock:ignoreStock},null,1);
 }
 function importJSON(txt){

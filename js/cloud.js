@@ -11,7 +11,7 @@ var TABLE        = "app_data";
 var K_LOCAL_TS   = "fig26_local_ts";
 var K_PENDING    = "fig26_pending";
 
-var sb=null, user=null, syncing=false, pushTimer=null, ready=false;
+var sb=null,user=null,syncing=false,pushTimer=null;
 
 /* ---------- helpers ---------- */
 function localTS(){return parseInt(localStorage.getItem(K_LOCAL_TS)||"0",10)}
@@ -27,10 +27,10 @@ function snapshot(){
 }
 function applyRemote(d){
   if(!d)return;
-  window.stock       = d.stock       || {};
-  window.orcamentos  = d.orcamentos  || [];
-  window.vendas      = d.vendas      || [];
-  window.demanda     = d.demanda     || [];
+  window.stock      = d.stock      || {};
+  window.orcamentos = d.orcamentos || [];
+  window.vendas     = d.vendas     || [];
+  window.demanda    = d.demanda    || [];
   if(typeof d.ignoreStock==="boolean")window.ignoreStock=d.ignoreStock;
   localStorage.setItem(K_STOCK,JSON.stringify(stock));
   localStorage.setItem(K_ORC,JSON.stringify(orcamentos));
@@ -55,52 +55,28 @@ function redraw(){
 }
 
 /* ---------- UI injetada ---------- */
-function injectStyles(){
-  var s=document.createElement("style");
-  s.textContent=
-  ".cloud-box{background:#141c22;border:1px solid #2a4250;border-radius:12px;padding:12px 14px;"+
-    "margin:0 0 14px;font-size:12.5px;line-height:1.6}"+
-  ".cloud-box .cb-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}"+
-  ".cloud-box .cb-ic{font-size:17px}"+
-  ".cloud-box b{color:#9fd8f5}"+
-  ".cloud-box .cb-mail{font-size:11.5px;opacity:.6;word-break:break-all}"+
-  ".cloud-box .cb-actions{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}"+
-  ".cloud-box input{margin-top:7px}"+
-  ".cloud-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#666;"+
-    "box-shadow:0 0 0 2px rgba(255,255,255,.05)}"+
-  ".cloud-dot.on{background:#4caf7d;animation:cbp 2.4s infinite}"+
-  ".cloud-dot.sync{background:#e0a83c;animation:cbp .9s infinite}"+
-  ".cloud-dot.off{background:#d9534f}"+
-  "@keyframes cbp{0%,100%{opacity:1}50%{opacity:.35}}"+
-  ".cloud-chip{display:flex;align-items:center;gap:7px;background:#141c22;border:1px solid #2a4250;"+
-    "border-radius:20px;padding:7px 12px;font-size:11px;font-weight:700;color:#9fd8f5;"+
-    "cursor:pointer;margin-bottom:9px}"+
-  ".cloud-chip:hover{border-color:#3d6b85}"+
-  ".cb-hint{font-size:11px;opacity:.5;margin-top:7px;line-height:1.5}";
-  document.head.appendChild(s);
-}
 function injectUI(){
-  /* card no topo do Estoque */
   var box=document.createElement("div");
   box.className="cloud-box";box.id="cloudBox";
   var host=el("v-estoque");
   host.insertBefore(box,host.querySelector(".counter"));
 
-  /* chip no rodapé do drawer */
   var chip=document.createElement("div");
   chip.className="cloud-chip";chip.id="cloudChip";
   chip.innerHTML='<span class="cloud-dot off" id="cloudDot2"></span><span id="cloudChipTx">Nuvem: offline</span>';
-  chip.onclick=function(){drawer(false);go("estoque");
-    setTimeout(function(){el("cloudBox").scrollIntoView({behavior:"smooth",block:"center"})},260)};
+  chip.onclick=function(){
+    drawer(false);go("estoque");
+    setTimeout(function(){el("cloudBox").scrollIntoView({behavior:"smooth",block:"center"})},260);
+  };
   var foot=document.querySelector(".drawer-foot");
   foot.insertBefore(chip,foot.firstChild);
 }
 function paintUI(state,msg){
   var box=el("cloudBox"); if(!box)return;
   var dot=state==="on"?"on":state==="sync"?"sync":"off";
-  var chipTx={on:"Nuvem: sincronizado",sync:"Nuvem: sincronizando…",off:"Nuvem: offline"}[state];
   el("cloudDot2").className="cloud-dot "+dot;
-  el("cloudChipTx").textContent=chipTx;
+  el("cloudChipTx").textContent=
+    {on:"Nuvem: sincronizado",sync:"Nuvem: sincronizando…",off:"Nuvem: offline"}[state];
 
   if(user){
     box.innerHTML=
@@ -137,7 +113,7 @@ function paintUI(state,msg){
 
 /* ---------- AUTH ---------- */
 function auth(mode){
-  var mail=(el("cbMail").value||"").trim(), pass=el("cbPass").value||"";
+  var mail=(el("cbMail").value||"").trim(),pass=el("cbPass").value||"";
   if(!mail||pass.length<6){say("Informe e-mail e senha (mín. 6)","warn2");return}
   paintUI("sync","Conectando…");
   var fn=mode==="up"?sb.auth.signUp({email:mail,password:pass})
@@ -156,6 +132,7 @@ function traduz(m){
   if(/already registered/i.test(m))return "E-mail já cadastrado — use Entrar";
   if(/at least 6/i.test(m))return "A senha precisa de 6+ caracteres";
   if(/rate limit|too many/i.test(m))return "Muitas tentativas — aguarde um pouco";
+  if(/signups? not allowed|disabled/i.test(m))return "Cadastro desabilitado no projeto";
   return m;
 }
 function logout(){
@@ -169,7 +146,7 @@ function firstSync(){
   sb.from(TABLE).select("dados,updated_at").eq("user_id",user.id).maybeSingle()
    .then(function(r){
      if(r.error){paintUI("on","⚠️ "+r.error.message);return}
-     var rem=r.data&&r.data.dados, remTS=rem&&rem.ts?rem.ts:0, locTS=localTS();
+     var rem=r.data&&r.data.dados,remTS=rem&&rem.ts?rem.ts:0,locTS=localTS();
      var locVazio=!Object.keys(stock).length&&!vendas.length&&!orcamentos.length&&!demanda.length;
      var remVazio=!rem||(!Object.keys(rem.stock||{}).length&&!(rem.vendas||[]).length&&
                          !(rem.orcamentos||[]).length&&!(rem.demanda||[]).length);
@@ -180,7 +157,7 @@ function firstSync(){
      if(remVazio&&locVazio){push(false);paintUI("on","Pronto — comece a cadastrar");return}
 
      if(remTS>locTS+1500){
-       var qtdR=Object.keys(rem.stock||{}).length, qtdL=Object.keys(stock).length;
+       var qtdR=Object.keys(rem.stock||{}).length,qtdL=Object.keys(stock).length;
        if(confirm("☁️ A nuvem tem dados MAIS RECENTES.\n\n"+
           "Nuvem: "+qtdR+" seleções · "+new Date(remTS).toLocaleString("pt-BR")+"\n"+
           "Aqui:  "+qtdL+" seleções · "+(locTS?new Date(locTS).toLocaleString("pt-BR"):"sem data")+"\n\n"+
@@ -194,8 +171,7 @@ function push(avisar){
   if(!user||syncing)return;
   syncing=true;paintUI("sync");
   if(!localTS())markLocal();
-  var payload=snapshot();
-  sb.from(TABLE).upsert({user_id:user.id,dados:payload,updated_at:new Date().toISOString()},
+  sb.from(TABLE).upsert({user_id:user.id,dados:snapshot(),updated_at:new Date().toISOString()},
                         {onConflict:"user_id"})
    .then(function(r){
      syncing=false;
@@ -214,8 +190,7 @@ function pull(avisar){
      if(r.error||!r.data||!r.data.dados){paintUI("on","Nada salvo na nuvem ainda");
        if(avisar)say("Nada salvo na nuvem ainda","warn2");return}
      if(avisar&&!confirm("⬇️ Substituir os dados DESTE aparelho pelos da nuvem?\n\n"+
-        "O que estiver só aqui e não foi enviado será perdido."))
-       {paintUI("on");return}
+        "O que estiver só aqui e não foi enviado será perdido.")){paintUI("on");return}
      applyRemote(r.data.dados);
      paintUI("on","⬇️ Baixado às "+new Date().toLocaleTimeString("pt-BR"));
      if(avisar)say("⬇️ Dados da nuvem aplicados");
@@ -235,21 +210,19 @@ function hook(){
     if(typeof orig!=="function")return;
     window[fn]=function(){var r=orig.apply(this,arguments);schedulePush();return r};
   });
-  var origImport=window.importJSON;
-  if(typeof origImport==="function"){
-    window.importJSON=function(t){var r=origImport.call(this,t);schedulePush();return r};
-  }
+  var oi=window.importJSON;
+  if(typeof oi==="function")
+    window.importJSON=function(t){var r=oi.call(this,t);schedulePush();return r};
 }
 
 /* ---------- BOOT ---------- */
 function boot(){
-  injectStyles();injectUI();hook();
+  injectUI();hook();
   if(typeof supabase==="undefined"){
     paintUI("off","❌ Biblioteca do Supabase não carregou (sem internet?)");return;
   }
   sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,
     {auth:{persistSession:true,autoRefreshToken:true}});
-  ready=true;
   paintUI("off");
   sb.auth.getSession().then(function(r){
     if(r.data.session){user=r.data.session.user;firstSync()}
@@ -258,18 +231,9 @@ function boot(){
     if(ev==="SIGNED_OUT"){user=null;paintUI("off")}
     if(ev==="TOKEN_REFRESHED"&&s)user=s.user;
   });
-  /* reenvia o que ficou pendente ao voltar a conexão / abrir o app */
   window.addEventListener("online",function(){if(user&&pending())push(false)});
   document.addEventListener("visibilitychange",function(){
     if(!document.hidden&&user&&pending())push(false);
-  });
-  window.addEventListener("beforeunload",function(){
-    if(user&&pending()&&navigator.sendBeacon){
-      try{
-        navigator.sendBeacon(SUPABASE_URL+"/rest/v1/"+TABLE+"?on_conflict=user_id",
-          new Blob([JSON.stringify({user_id:user.id,dados:snapshot()})],{type:"application/json"}));
-      }catch(e){}
-    }
   });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);

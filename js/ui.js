@@ -822,6 +822,18 @@ function runTests(){
   ok("classeBtn marca craque",classeBtn("POR",15,"").indexOf("ace")>-1);
   ok("classeBtn marca brilhante",classeBtn("BRA",1,"").indexOf("shiny")>-1);
 
+  G("Scanner");
+  ok("Catálogo com 1000 códigos",window.SCAN_CATALOG_SIZE===1000,"tamanho: "+window.SCAN_CATALOG_SIZE);
+  if(window.scanMatch){
+    ok("Reconhece 'BRA 5'",(scanMatch("BRA 5")[0]||{}).key==="BRA05");
+    ok("Reconhece 'FWC00'",(scanMatch("FWC00")[0]||{}).key==="FWC00");
+    ok("Tolera OCR 'BRA O5' → BRA05",(scanMatch("BRA O5")[0]||{}).key==="BRA05");
+    ok("Tolera '8RA 5' → BRA05",(scanMatch("8RA 5")[0]||{}).key==="BRA05");
+    ok("Rejeita lixo",scanMatch("###").length===0);
+    ok("Nunca retorna nº fora da faixa",
+      scanMatch("BRA 99").every(function(c){return validNum(c.code,c.num)}));
+  }
+
   G("Bandeiras");
   ok("URL de bandeira gerada para MEX",(flagURL("MEX")||"").indexOf("/mx.png")>-1,flagURL("MEX"));
   ok("Escócia usa gb-sct",(flagURL("SCO")||"").indexOf("gb-sct")>-1);
@@ -852,7 +864,6 @@ function runTests(){
 
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded",function(){
-  /* navegação */
   $$(".dn-item").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
   $$(".tab").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
   $("#btnMenu").onclick=function(){drawer(!$("#drawer").classList.contains("show"))};
@@ -869,7 +880,6 @@ document.addEventListener("DOMContentLoaded",function(){
     if(e.key==="?")toggleHelp(true);
     if(e.key==="m"||e.key==="M")drawer(!$("#drawer").classList.contains("show"));
   });
-  /* swipe para fechar o drawer */
   (function(){
     var x0=null;
     $("#drawer").addEventListener("touchstart",function(e){x0=e.touches[0].clientX},{passive:true});
@@ -882,7 +892,6 @@ document.addEventListener("DOMContentLoaded",function(){
   $$("[data-copy]").forEach(function(b){b.onclick=function(){copiar(b.dataset.copy)}});
   $$("[data-share]").forEach(function(b){b.onclick=function(){compartilhar(b.dataset.share)}});
 
-  /* estoque */
   $("#searchStock").oninput=function(){renderStock(this.value)};
   $("#btnListStock").onclick=gerarListaEstoque;
   $("#btnZerar").onclick=zerarEstoque;
@@ -892,7 +901,6 @@ document.addEventListener("DOMContentLoaded",function(){
   $("#btnImportD").onclick=function(){$("#impFile").click()};
   $("#impFile").onchange=doImportFile;
 
-  /* oferta */
   $("#btnProc").onclick=processarOferta;
   $("#btnLimparOf").onclick=function(){
     $("#ofInput").value="";$("#ofName").value="";
@@ -908,7 +916,6 @@ document.addEventListener("DOMContentLoaded",function(){
     if(salvarOrcamento(oferta.name,oferta.offered,oferta.requested)){renderOrcList();go("orcamentos")}
   };
 
-  /* livre */
   $("#searchLivre").oninput=function(){renderLivre(this.value)};
   $("#lvOnlyStock").onchange=function(){renderLivre(val("searchLivre"))};
   $("#btnListLv").onclick=gerarListaLivre;
@@ -924,18 +931,15 @@ document.addEventListener("DOMContentLoaded",function(){
     renderLivre(val("searchLivre"));toast("🗑️ Seleção limpa");
   };
 
-  /* procuradas */
   $("#searchDem").oninput=renderDemanda;
   $("#demOnlyHot").onchange=renderDemanda;
   $("#btnListDem").onclick=gerarListaDemanda;
   $("#btnClearDem").onclick=limparDemanda;
 
-  /* orçamentos / vendas */
   $("#btnListOrc").onclick=gerarListaOrc;
   $("#btnVenda").onclick=confirmarVenda;
   $("#btnCloseOrc").onclick=fecharOrc;
 
-  /* testes */
   $("#btnTests").onclick=runTests;
 
   paintIgnore();

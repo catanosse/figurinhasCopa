@@ -36,8 +36,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
 .drawer-head{display:flex;align-items:flex-start;gap:10px;padding:16px 15px 13px;border-bottom:1px solid #292929}
 .dh-title{font-size:15.5px;font-weight:800;color:#6fd39c;line-height:1.3}
 .dh-sub{font-size:11px;opacity:.45;margin-top:3px;line-height:1.5}
-.drawer-stats{display:flex;gap:6px;flex-wrap:wrap;padding:11px 15px;border-bottom:1px solid #262626;
-  background:#131313}
+.drawer-stats{display:flex;gap:6px;flex-wrap:wrap;padding:11px 15px;border-bottom:1px solid #262626;background:#131313}
 .dstat{flex:1;min-width:66px;background:#1b1b1b;border:1px solid #303030;border-radius:10px;padding:7px 8px;text-align:center}
 .dstat b{display:block;font-size:15px;color:#6fd39c;line-height:1.2}
 .dstat span{font-size:9.5px;opacity:.5;text-transform:uppercase;letter-spacing:.5px}
@@ -257,18 +256,70 @@ kbd{background:#333;border:1px solid #555;border-radius:5px;padding:1px 6px;font
 code{background:#252525;border:1px solid #3a3a3a;border-radius:4px;padding:1px 5px;font-size:11.5px}
 
 /* ================= SCANNER ================= */
-.scan-cfg{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;font-size:12px;align-items:center}
-.scan-cfg select{max-width:230px}
-.scan-cfg input[type=number]{width:84px;text-align:center}
-.scan-cfg label{display:flex;align-items:center;gap:6px;opacity:.75}
-.scan-wrap{position:relative;max-width:420px;margin:0 auto 12px;border-radius:14px;overflow:hidden;
-  background:#000;border:1px solid #333;min-height:110px}
+.scan-wrap{position:relative;max-width:440px;margin:0 auto 12px;border-radius:14px;overflow:hidden;
+  background:#000;border:1px solid #333;min-height:130px}
 #scanVideo{width:100%;display:block}
-.scan-mask{position:absolute;inset:0;pointer-events:none}
-.scan-mask::after{content:"";position:absolute;left:8%;right:8%;top:34%;height:32%;
-  border:2px solid #6fd39c;border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.45)}
-.scan-big{font-size:24px;font-weight:800;text-align:center;color:#6fd39c;padding:11px;background:#12251c;
-  border:1px solid #2f5c42;border-radius:12px;margin-bottom:12px}
+.scan-roi{position:absolute;left:7%;right:7%;top:30%;height:40%;pointer-events:none;
+  box-shadow:0 0 0 999px rgba(0,0,0,.5);border-radius:12px}
+.roi-c{position:absolute;width:22px;height:22px;border:3px solid #6fd39c}
+.roi-c.tl{top:-2px;left:-2px;border-right:none;border-bottom:none;border-radius:10px 0 0 0}
+.roi-c.tr{top:-2px;right:-2px;border-left:none;border-bottom:none;border-radius:0 10px 0 0}
+.roi-c.bl{bottom:-2px;left:-2px;border-right:none;border-top:none;border-radius:0 0 0 10px}
+.roi-c.br{bottom:-2px;right:-2px;border-left:none;border-top:none;border-radius:0 0 10px 0}
+.roi-tip{position:absolute;left:0;right:0;bottom:-25px;text-align:center;font-size:10.5px;
+  color:#6fd39c;opacity:.75;letter-spacing:.5px}
+.scan-flash{position:absolute;inset:0;background:#6fd39c;opacity:0;pointer-events:none;transition:opacity .12s}
+.scan-flash.on{opacity:.32}
+.scan-flash.bad{background:#d9534f}
+.scan-result{min-height:96px;background:#141414;border:1px solid #333;border-radius:14px;
+  padding:14px;margin-bottom:12px;text-align:center}
+.sr-idle{font-size:12.5px;opacity:.45;padding:16px 0;line-height:1.6}
+.sr-ok .sr-code{font-size:31px;font-weight:800;color:#6fd39c;letter-spacing:1px;line-height:1.15}
+.sr-ok .sr-team{font-size:13px;margin-top:5px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+.sr-meta{font-size:11px;opacity:.5;margin-top:6px}
+.sr-qty{display:inline-block;background:#1e3a2a;border:1px solid #3f7a55;color:#8fe0ae;
+  border-radius:8px;padding:2px 9px;font-size:11.5px;font-weight:700;margin-top:8px}
+.sr-bar{height:5px;background:#242424;border-radius:4px;overflow:hidden;margin:10px auto 0;max-width:210px}
+.sr-bar i{display:block;height:100%;background:linear-gradient(90deg,#d9534f,#e0a83c,#4caf7d);transition:.3s}
+.sr-ask{font-size:12.5px;color:#f0c04e;margin-bottom:9px;font-weight:600}
+.sr-cands{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+.sr-cand{background:#1c1c1c;border:1px solid #3a3a3a;border-radius:11px;padding:8px 12px;cursor:pointer;
+  font-size:12.5px;font-weight:700;color:#eee;transition:.15s;display:flex;align-items:center;gap:7px;font-family:inherit}
+.sr-cand:hover{border-color:#6fd39c;background:#1e2b24}
+.sr-cand small{font-weight:600;opacity:.45;font-size:10px}
+.sr-cand img{width:19px;height:14px;border-radius:2px}
+.sr-fail{font-size:13px;color:#ff9c9c;font-weight:600;padding:12px 0}
+.sr-fail span{display:block;font-size:11px;opacity:.6;font-weight:400;margin-top:5px}
+.sr-scan{font-size:12.5px;color:#9fd8f5;padding:16px 0;font-weight:600}
+.scan-opts{display:flex;gap:15px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;font-size:12px}
+.scan-session{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:6px}
+.ss-chip{display:flex;align-items:center;gap:5px;background:#1b1b1b;border:1px solid #333;
+  border-radius:16px;padding:4px 9px;font-size:11.5px;font-weight:700}
+.ss-chip img{width:17px;height:13px;border-radius:2px}
+.ss-chip button{background:none;border:none;color:#f88;cursor:pointer;font-size:13px;padding:0 1px;line-height:1}
+.ss-chip.new{animation:ssin .32s}
+@keyframes ssin{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ================= NUVEM ================= */
+.cloud-box{background:#141c22;border:1px solid #2a4250;border-radius:12px;padding:12px 14px;
+  margin:0 0 14px;font-size:12.5px;line-height:1.6}
+.cloud-box .cb-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.cloud-box .cb-ic{font-size:17px}
+.cloud-box b{color:#9fd8f5}
+.cloud-box .cb-mail{font-size:11.5px;opacity:.6;word-break:break-all}
+.cloud-box .cb-actions{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.cloud-box input{margin-top:7px}
+.cb-hint{font-size:11px;opacity:.5;margin-top:7px;line-height:1.5}
+.cloud-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#666;
+  box-shadow:0 0 0 2px rgba(255,255,255,.05)}
+.cloud-dot.on{background:#4caf7d;animation:cbp 2.4s infinite}
+.cloud-dot.sync{background:#e0a83c;animation:cbp .9s infinite}
+.cloud-dot.off{background:#d9534f}
+@keyframes cbp{0%,100%{opacity:1}50%{opacity:.35}}
+.cloud-chip{display:flex;align-items:center;gap:7px;background:#141c22;border:1px solid #2a4250;
+  border-radius:20px;padding:7px 12px;font-size:11px;font-weight:700;color:#9fd8f5;
+  cursor:pointer;margin-bottom:9px}
+.cloud-chip:hover{border-color:#3d6b85}
 
 /* ================= TOAST ================= */
 #toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(20px);background:#4caf7d;
