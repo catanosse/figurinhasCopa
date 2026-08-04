@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Figurinhas Copa 2026 — Gestão</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="manifest" href="manifest.json">
@@ -10,116 +10,241 @@
 </head>
 <body>
 
+<div id="toast"></div>
+
 <div class="topbar"><div class="topbar-inner">
+  <span class="brand">🏆 Copa 2026</span>
   <button class="nav-btn active" data-view="estoque">📦 Estoque</button>
-  <button class="nav-btn" data-view="oferta">📤 Oferta</button>
-  <button class="nav-btn" data-view="importar">📥 Importar</button>
-  <button class="nav-btn" data-view="procuradas">🎯 Procuradas</button>
-  <button class="nav-btn" data-view="orcamento">🧾 Orçamento</button>
+  <button class="nav-btn" data-view="oferta">📥 Oferta</button>
+  <button class="nav-btn" data-view="livre">✏️ Livre</button>
+  <button class="nav-btn" data-view="procuradas">🔎 Procuradas<span class="nav-pill hidden" id="pillDem">0</span></button>
+  <button class="nav-btn" data-view="orcamentos">💾 Orçamentos</button>
   <button class="nav-btn" data-view="vendas">💰 Vendas</button>
-  <button class="nav-btn" data-view="mobile">📷 Scanner</button>
+  <button class="nav-btn" data-view="scanner">📷 Scanner</button>
+  <div class="switch" id="swIgnore" title="Liga/desliga a conferência — suas seleções são preservadas">
+    <span class="track"></span><span id="swLabel">Conferir estoque</span>
+  </div>
+  <button class="nav-btn" data-view="testes">🧪</button>
+  <button class="help-btn" id="btnHelp" title="Como usar">?</button>
 </div></div>
 
-<!-- ESTOQUE -->
+<!-- ================= AJUDA ================= -->
+<div class="modal-bg" id="helpModal">
+ <div class="modal">
+  <button class="close" id="btnHelpClose">✕</button>
+  <h3>❓ Como usar</h3>
+  <div class="msub">Cadastrar estoque → montar oferta → salvar → vender</div>
+  <div class="step"><div class="n r">🔴</div><div class="txt"><span class="t">Selecionar sem estar no estoque</span>
+   Pegou a figurinha na mão mas ainda não cadastrou? <b>Pode clicar normalmente</b>.
+   Ela fica com <b>fundo vermelho + borda verde e ✔</b>. Ao confirmar a venda, essas aparecem
+   separadas e você escolhe se quer <b>cadastrá-las no estoque automaticamente</b>.</div></div>
+  <div class="step"><div class="n g">🔓</div><div class="txt"><span class="t">Interruptor "Conferir estoque"</span>
+   Ligar/desligar <b>nunca apaga</b> o que você já marcou.</div></div>
+  <div class="step"><div class="n r">🔎</div><div class="txt"><span class="t">Procuradas</span>
+   Cada lista processada em <b>📥 Oferta</b> registra o que faltou. Na aba <b>🔎 Procuradas</b>
+   há o ranking de demanda, com <b>quem</b> pediu, e a lista <b>"PROCURO"</b> pronta.</div></div>
+  <div class="step"><div class="n p">⭐</div><div class="txt"><span class="t">Craques</span>
+   Destacados em roxo com ⭐ e o sobrenome no card. Edite a tabela <code>ACES</code> em <code>js/data.js</code>.</div></div>
+  <div class="step"><div class="n g">✨</div><div class="txt"><span class="t">Brilhantes</span>
+   A <b>primeira de cada seleção</b> e <b>todas</b> de <b>🏆 FWC (00–19)</b> e <b>⭐ Históricas</b>.</div></div>
+  <div class="step"><div class="n">1</div><div class="txt"><span class="t">📦 Estoque</span>
+   <b>Clique</b> = +1. <b><kbd>Shift</kbd>+clique</b> ou <b>toque longo</b> = −1.<br>
+   Filtro aceita <b>país, sigla, craque</b> ou <b>número</b> (<code>1</code>, <code>13</code>).</div></div>
+  <div class="step"><div class="n">2</div><div class="txt"><span class="t">📥 Oferta</span>
+   Aceita <b>inline</b> (<code>POR10, POR-14</code>) e <b>agrupado</b> (<code>BIH 🇧🇦: 5, 13</code>).</div></div>
+  <div class="step"><div class="n b">↩️</div><div class="txt"><span class="t">Cancelar Venda</span>
+   Devolve as figurinhas ao estoque e recria o orçamento.</div></div>
+  <div class="tip">💡 Tudo salvo no navegador. Use <b>Backup (JSON)</b>. Atalhos: <kbd>?</kbd> abre, <kbd>Esc</kbd> fecha.</div>
+ </div>
+</div>
+
+<!-- ================= ESTOQUE ================= -->
 <div class="wrapper view" id="v-estoque">
-  <h1>Estoque <span class="pill" id="stockCounter">0</span></h1>
-  <div class="row">
-    <input id="qFilter" placeholder="Filtrar time ou sigla...">
-    <label class="chk"><input type="checkbox" id="onlyHave"> só com repetidas</label>
-    <button class="btn danger" id="btnClear">Zerar tudo</button>
+  <h2>📦 Meu Estoque</h2>
+  <div class="banner" id="bn1">🔓 <b>Modo sem conferência ativo</b> — as ofertas não estão validando o estoque.</div>
+  <div class="subtitle">Cadastre as figurinhas repetidas que você tem para vender</div>
+  <div class="counter" id="stockCounter">—</div>
+  <div class="acebox" id="stockAces"></div>
+  <div class="hint"><b>Clique</b> = +1 &nbsp;•&nbsp; <b>Shift + clique</b> / <b>toque longo</b> = −1<br>
+  O selo <span style="color:#ff9c9c">vermelho</span> indica quantas pessoas procuram aquela figurinha</div>
+  <div class="legend">
+    <span><i class="dot" style="background:#2a2a2a;border:1px solid #3a3a3a"></i> Não tenho</span>
+    <span><i class="dot" style="background:#4caf7d"></i> Tenho</span>
+    <span><i class="dot" style="background:#f0a53e"></i> Qtd.</span>
+    <span><i class="dot" style="background:#d9534f"></i> Procurada</span>
+    <span><i class="dot" style="background:#3a2f14;box-shadow:inset 0 0 0 2px #c9971f"></i> ✨ brilhante</span>
+    <span><i class="dot" style="background:#2e2145;box-shadow:inset 0 0 0 2px #a06fe0"></i> ⭐ craque</span>
   </div>
-  <div id="stockGrid"></div>
+  <div class="search-box"><input type="text" id="searchStock" placeholder="🔍 País, sigla, craque ou nº (ex: 1, 13)"></div>
+  <div class="filter-tip" id="filterTip"></div>
+  <div id="stockContainer"></div>
+  <div class="actions">
+    <button class="btn green" id="btnListStock">📋 Gerar Lista do Estoque</button>
+    <button class="btn" data-copy="outStock">📎 Copiar</button>
+    <button class="btn blue" data-share="outStock">📲 Compartilhar</button>
+    <button class="btn red" id="btnZerar">🗑️ Zerar Estoque</button>
+  </div>
+  <div class="out" id="outStock"></div>
+  <div class="divider"></div>
+  <div class="actions">
+    <button class="btn" id="btnExport">⬇️ Backup (JSON)</button>
+    <button class="btn" id="btnImport">⬆️ Restaurar Backup</button>
+    <input type="file" id="impFile" accept=".json" class="hidden">
+  </div>
 </div>
 
-<!-- OFERTA -->
+<!-- ================= NOVA OFERTA ================= -->
 <div class="wrapper view hidden" id="v-oferta">
-  <h1>Gerar oferta</h1>
-  <div class="row">
-    <label class="chk"><input type="checkbox" id="ofMin2" checked> só qtd ≥ 2</label>
-    <label class="chk"><input type="checkbox" id="ofRange" checked> agrupar faixas (1-5)</label>
-    <label class="chk"><input type="checkbox" id="ofAce" checked> marcar craques ⭐</label>
-    <button class="btn" id="btnGenOffer">Gerar</button>
-    <button class="btn" id="btnCopyOffer">Copiar</button>
+  <h2>📥 Nova Oferta</h2>
+  <div class="banner" id="bn2">🔓 <b>Modo sem conferência</b> — nada vem pré-marcado: escolha o que oferecer.</div>
+  <div class="subtitle">Cole a lista recebida — aceita formato inline e agrupado</div>
+  <input type="text" id="ofName" placeholder="Nome do cliente (ex: João — 3ª lista)" style="margin-bottom:9px">
+  <textarea id="ofInput" placeholder="Cole aqui a lista recebida.&#10;&#10;Exemplos aceitos:&#10;BIH 🇧🇦: 5, 13&#10;SUI 🇨🇭: 7, 18, 19&#10;FWC 00, POR 15, ARG 17&#10;POR10, POR-14, bra19"></textarea>
+  <div class="actions">
+    <button class="btn green" id="btnProc">⚙️ Processar e Cruzar com Estoque</button>
+    <button class="btn" id="btnLimparOf">🗑️ Limpar</button>
   </div>
-  <textarea id="offerOut" rows="16" placeholder="A oferta aparece aqui..."></textarea>
+  <div id="ofResultArea" class="hidden">
+    <div class="divider"></div>
+    <div class="counter" id="ofCounter">—</div>
+    <div class="acebox" id="ofAces"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:#4caf7d"></i> Selecionada (tenho)</span>
+      <span><i class="dot" style="background:#3d1f1f;border:2px solid #6fd39c"></i> Selecionada s/ estoque</span>
+      <span><i class="dot" style="background:#2a1f1f;border:1px solid #8a3030"></i> Não tenho (clicável)</span>
+      <span><i class="dot" style="background:#2a2a2a;border:1px solid #3a3a3a"></i> Desmarcada</span>
+    </div>
+    <div class="hint" id="ofHint">Clique para marcar/desmarcar — as sem estoque também podem ser selecionadas.</div>
+    <div class="actions" style="margin:0 0 14px">
+      <button class="btn btn-sm green" id="btnAllOn">✅ Marcar as que tenho</button>
+      <button class="btn btn-sm red" id="btnAllAny">🔴 Marcar todas (inclui s/ estoque)</button>
+      <button class="btn btn-sm" id="btnAllOff">⬜ Desmarcar todas</button>
+    </div>
+    <div id="ofContainer"></div>
+    <div class="actions">
+      <button class="btn green" id="btnListOf">📋 Gerar Lista</button>
+      <button class="btn" data-copy="outOferta">📎 Copiar</button>
+      <button class="btn blue" data-share="outOferta">📲 Compartilhar</button>
+      <button class="btn gold" id="btnSaveOf">💾 Salvar Orçamento</button>
+    </div>
+    <div class="out" id="outOferta"></div>
+  </div>
 </div>
 
-<!-- IMPORTAR -->
-<div class="wrapper view hidden" id="v-importar">
-  <h1>Importar lista livre</h1>
-  <p class="hint">Cole qualquer formato: <code>MEX 3,5,7-9 / ARG 1 2 3</code>. Números soltos usam o time do último cabeçalho.</p>
-  <textarea id="impIn" rows="10" placeholder="MEX 3,5,7-9&#10;ARG 01 02 15"></textarea>
-  <div class="row">
-    <select id="impMode">
-      <option value="add">Somar ao estoque</option>
-      <option value="set">Definir quantidade 1</option>
-      <option value="want">Enviar para Procuradas</option>
-    </select>
-    <button class="btn" id="btnImport">Processar</button>
+<!-- ================= ESCOLHA LIVRE ================= -->
+<div class="wrapper view hidden" id="v-livre">
+  <h2>✏️ Escolha Livre</h2>
+  <div class="banner" id="bn3">🔓 <b>Modo sem conferência</b> — avisos de saldo desativados.</div>
+  <div class="subtitle">Monte a oferta clicando direto nas figurinhas, sem precisar de lista</div>
+  <input type="text" id="lvName" placeholder="Nome do cliente (ex: Maria — pedido do grupo)" style="margin-bottom:9px">
+  <div class="counter" id="lvCounter">—</div>
+  <div class="acebox" id="lvAces"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:#4caf7d"></i> Selecionada (tenho)</span>
+    <span><i class="dot" style="background:#3d1f1f;border:2px solid #6fd39c"></i> Selecionada s/ estoque</span>
+    <span><i class="dot" style="background:#2a1f1f;border:1px solid #8a3030"></i> Sem estoque (clicável)</span>
   </div>
-  <div class="scan-log" id="impLog"></div>
+  <div class="search-box"><input type="text" id="searchLivre" placeholder="🔍 País, sigla, craque ou nº"></div>
+  <label class="chk"><input type="checkbox" id="lvOnlyStock"> Mostrar apenas seleções que tenho em estoque</label>
+  <div id="lvContainer"></div>
+  <div class="actions">
+    <button class="btn green" id="btnListLv">📋 Gerar Lista</button>
+    <button class="btn" data-copy="outLivre">📎 Copiar</button>
+    <button class="btn blue" data-share="outLivre">📲 Compartilhar</button>
+    <button class="btn gold" id="btnSaveLv">💾 Salvar Orçamento</button>
+    <button class="btn red" id="btnClearLv">🗑️ Limpar Seleção</button>
+  </div>
+  <div class="out" id="outLivre"></div>
 </div>
 
-<!-- PROCURADAS -->
+<!-- ================= PROCURADAS ================= -->
 <div class="wrapper view hidden" id="v-procuradas">
-  <h1>Procuradas <span class="pill" id="wantCounter">0</span></h1>
-  <div class="row">
-    <input id="wantIn" placeholder="Ex: MEX 3,5 ARG 12">
-    <button class="btn" id="btnWantAdd">Adicionar</button>
-    <button class="btn" id="btnWantCopy">Copiar lista</button>
-    <button class="btn danger" id="btnWantClear">Limpar</button>
+  <h2>🔎 Procuradas</h2>
+  <div class="subtitle">O que te pediram e você <b>não tem</b> — use para trocar e aumentar o estoque</div>
+  <div class="counter" id="demCounter">—</div>
+  <div class="hint">Cada lista processada em <b>📥 Oferta</b> alimenta este radar automaticamente.<br>
+  Clique em <b>+1</b> quando conseguir a figurinha: ela vai para o estoque e sai desta lista.</div>
+  <div class="acebox" id="demAces"></div>
+  <div class="search-box"><input type="text" id="searchDem" placeholder="🔍 Filtrar por seleção, código ou pessoa..."></div>
+  <label class="chk"><input type="checkbox" id="demOnlyHot"> Mostrar apenas as pedidas por 2+ pessoas</label>
+  <div id="demRanking"></div>
+  <div class="actions">
+    <button class="btn green" id="btnListDem">📋 Gerar Lista "PROCURO"</button>
+    <button class="btn" data-copy="outDem">📎 Copiar</button>
+    <button class="btn blue" data-share="outDem">📲 Compartilhar</button>
+    <button class="btn red" id="btnClearDem">🗑️ Limpar Registros</button>
   </div>
-  <div id="wantList" class="chips"></div>
-  <h2>Casamentos com a lista importada</h2>
-  <div class="scan-log" id="matchLog">Importe uma lista para comparar.</div>
+  <div class="out" id="outDem"></div>
+  <div class="divider"></div>
+  <h2 style="font-size:17px">📇 Pedidos registrados</h2>
+  <div class="subtitle">Histórico por pessoa — exclua os que já resolveu</div>
+  <div id="demList"></div>
 </div>
 
-<!-- ORÇAMENTO -->
-<div class="wrapper view hidden" id="v-orcamento">
-  <h1>Orçamento</h1>
-  <div class="row">
-    <input id="orcName" placeholder="Cliente">
-    <input id="orcQty" type="number" min="1" value="1" placeholder="Qtd figurinhas">
-    <input id="orcUnit" type="number" step="0.01" value="0.50" placeholder="Preço unit.">
-    <input id="orcFrete" type="number" step="0.01" value="0" placeholder="Frete">
-    <button class="btn" id="btnOrcAdd">Salvar</button>
+<!-- ================= ORÇAMENTOS ================= -->
+<div class="wrapper view hidden" id="v-orcamentos">
+  <h2>💾 Orçamentos Salvos</h2>
+  <div class="banner" id="bn4">🔓 <b>Modo sem conferência</b> — avisos de saldo desativados.</div>
+  <div class="subtitle">Ofertas montadas aguardando confirmação do cliente</div>
+  <div id="orcList"></div>
+  <div id="orcDetail" class="hidden">
+    <div class="divider"></div>
+    <h2 id="orcDetailTitle" style="font-size:18px"></h2>
+    <div class="subtitle" id="orcDetailSub"></div>
+    <div class="counter" id="orcCounter">—</div>
+    <div class="acebox" id="orcAces"></div>
+    <div class="warn" id="orcWarn"></div>
+    <div id="orcDetailContainer"></div>
+    <div class="actions">
+      <button class="btn green" id="btnListOrc">📋 Gerar Lista</button>
+      <button class="btn" data-copy="outOrc">📎 Copiar</button>
+      <button class="btn blue" data-share="outOrc">📲 Compartilhar</button>
+      <button class="btn gold" id="btnVenda">✅ Confirmar Venda (dar baixa)</button>
+      <button class="btn" id="btnCloseOrc">↩️ Voltar</button>
+    </div>
+    <div class="out" id="outOrc"></div>
   </div>
-  <div class="scan-big" id="orcTotal">R$ 0,00</div>
-  <table class="tb" id="orcTable"></table>
 </div>
 
-<!-- VENDAS -->
+<!-- ================= VENDAS ================= -->
 <div class="wrapper view hidden" id="v-vendas">
-  <h1>Vendas <span class="pill" id="vendTotal">R$ 0,00</span></h1>
-  <div class="row">
-    <input id="vdName" placeholder="Comprador">
-    <input id="vdItems" placeholder="Itens (ex: MEX 3,5)">
-    <input id="vdValue" type="number" step="0.01" placeholder="Valor">
-    <label class="chk"><input type="checkbox" id="vdBaixa" checked> dar baixa no estoque</label>
-    <button class="btn" id="btnVdAdd">Registrar</button>
-  </div>
-  <table class="tb" id="vendTable"></table>
+  <h2>💰 Histórico de Vendas</h2>
+  <div class="subtitle">Vendas confirmadas com baixa no estoque</div>
+  <div class="counter" id="salesCounter">—</div>
+  <div class="hint">↩️ <b>Cancelar Venda</b> devolve as figurinhas ao estoque e recria o orçamento &nbsp;•&nbsp; 🗑️ <b>Excluir</b> apaga só o registro</div>
+  <div id="salesList"></div>
 </div>
 
-<!-- SCANNER -->
-<div class="wrapper view hidden" id="v-mobile">
-  <h1>Scanner (OCR)</h1>
+<!-- ================= SCANNER ================= -->
+<div class="wrapper view hidden" id="v-scanner">
+  <h2>📷 Scanner (OCR)</h2>
+  <div class="subtitle">Aponte a câmera para o número da figurinha — precisa de HTTPS</div>
   <div class="scan-cfg">
     <select id="scanTeam"></select>
     <label>intervalo <input type="number" id="scanEvery" value="1500" min="600" step="100"></label>
-    <label class="chk"><input type="checkbox" id="scanAuto" checked> auto-adicionar</label>
+    <label class="chk" style="margin:0"><input type="checkbox" id="scanAuto" checked> auto +1</label>
   </div>
-  <div class="row">
-    <button class="btn" id="btnScanStart">▶ Iniciar câmera</button>
+  <div class="actions" style="margin:0 0 12px">
+    <button class="btn green" id="btnScanStart">▶️ Iniciar</button>
     <button class="btn" id="btnScanShot">📸 Ler agora</button>
-    <button class="btn danger" id="btnScanStop">⏹ Parar</button>
+    <button class="btn red" id="btnScanStop">⏹️ Parar</button>
   </div>
-  <div class="scan-wrap">
-    <video id="scanVideo" playsinline muted></video>
-    <div class="scan-mask"></div>
-  </div>
+  <div class="scan-wrap"><video id="scanVideo" playsinline muted></video><div class="scan-mask"></div></div>
   <div class="scan-big" id="scanBig">—</div>
-  <div class="scan-log" id="scanLog"></div>
+  <div class="actions" style="margin:0 0 12px">
+    <input type="text" id="scanManual" placeholder="nº" style="max-width:90px;text-align:center">
+    <button class="btn green btn-sm" id="btnScanManual">+1 manual</button>
+  </div>
+  <div class="out" id="scanLog" style="display:block">Pronto.</div>
+</div>
+
+<!-- ================= TESTES ================= -->
+<div class="wrapper view hidden" id="v-testes">
+  <h2>🧪 Testes Unitários</h2>
+  <div class="subtitle">Valida as funcionalidades — seus dados reais não são alterados</div>
+  <div class="actions"><button class="btn green" id="btnTests">▶️ Executar Testes</button></div>
+  <div id="testSummary"></div>
+  <div id="testResults"><div class="empty">Clique em <b>Executar Testes</b> para começar.</div></div>
 </div>
 
 <script src="js/data.js"></script>

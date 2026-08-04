@@ -1,12 +1,16 @@
 {
   "name": "Figurinhas Copa 2026 — Gestão",
   "short_name": "Figurinhas26",
-  "start_url": ".",
+  "description": "Controle de estoque, ofertas, procuradas, orçamentos e vendas de figurinhas da Copa 2026",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0d0d0d",
   "theme_color": "#0d0d0d",
+  "lang": "pt-BR",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
