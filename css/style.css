@@ -259,8 +259,10 @@ code{background:#252525;border:1px solid #3a3a3a;border-radius:4px;padding:1px 5
 .scan-wrap{position:relative;max-width:440px;margin:0 auto 12px;border-radius:14px;overflow:hidden;
   background:#000;border:1px solid #333;min-height:130px}
 #scanVideo{width:100%;display:block}
-.scan-roi{position:absolute;left:7%;right:7%;top:30%;height:40%;pointer-events:none;
-  box-shadow:0 0 0 999px rgba(0,0,0,.5);border-radius:12px}
+
+/* ALTERADO: moldura fixa desativada (o #scanBox dinâmico assume o papel) */
+.scan-roi{display:none}
+
 .roi-c{position:absolute;width:22px;height:22px;border:3px solid #6fd39c}
 .roi-c.tl{top:-2px;left:-2px;border-right:none;border-bottom:none;border-radius:10px 0 0 0}
 .roi-c.tr{top:-2px;right:-2px;border-left:none;border-bottom:none;border-radius:0 10px 0 0}
@@ -344,3 +346,8 @@ code{background:#252525;border:1px solid #3a3a3a;border-radius:4px;padding:1px 5
   .brand{font-size:15px}
   h2{font-size:19px}
 }
+
+/* ================= SCAN BOX DINÂMICO ================= */
+#scanBox{position:absolute;border:2px solid #6cf;border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.35);transition:all .12s ease;
+  pointer-events:none;opacity:.35}

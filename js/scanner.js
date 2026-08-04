@@ -1,20 +1,23 @@
 /* =====================================================================
-   SCANNER v3 — detecção automática de sigla + número (verso da figurinha)
-   ROI → upscale → binarização adaptativa → OCR restrito
-       → match em 2 estágios (sigla → número) → votação → decisão
+   SCANNER v4 — acha a PÍLULA do código (retângulo escuro + texto branco)
+   em qualquer posição/rotação do frame → recorta → OCR só ali
+   Mantém: window.scanMatch, window.stopScanner, todos os IDs de UI
    ===================================================================== */
 (function(){
 "use strict";
 
 var CFG={
-  BURST:6, ROI:{x:.07,y:.30,w:.86,h:.40}, SCALE:3,
+  WORK_W:640,            // largura de trabalho p/ detecção (rápido)
+  BURST:4,               // tentativas de OCR por leitura
+  OCR_H:72,              // altura do crop enviado ao OCR
   AUTO_SCORE:.86, AUTO_MARGIN:.14, ASK_SCORE:.52,
-  PRIOR:.05, LOOP_MS:1400, COOLDOWN:1600
+  PRIOR:.05, LOOP_MS:900, COOLDOWN:1600,
+  FALLBACK_ROI:{x:.05,y:.25,w:.90,h:.50}   // usado se a pílula não for achada
 };
 var CONF={"0":"O","O":"0","1":"I","I":"1","5":"S","S":"5","8":"B","B":"8",
           "2":"Z","Z":"2","6":"G","G":"6","4":"A","A":"4","7":"T","T":"7"};
 
-var video,cvs,ctx,work,wctx,stream=null,worker=null,loop=null;
+var video,det,dctx,crop,cctx,stream=null,worker=null,loop=null;
 var busy=false,lastTeam=null,lastKey="",lastAt=0,session=[];
 
 function E(id){return document.getElementById(id)}
@@ -26,8 +29,7 @@ function flash(bad){
   setTimeout(function(){f.className="scan-flash"+(bad?" bad":"")},130);
 }
 function feedback(bad){
-  var s=E("scanSound");
-  if(!s||!s.checked)return;
+  var s=E("scanSound"); if(!s||!s.checked)return;
   if(navigator.vibrate)navigator.vibrate(bad?[40,60,40]:28);
   try{
     var A=window.AudioContext||window.webkitAudioContext;if(!A)return;
@@ -44,9 +46,7 @@ var CATALOG=[],CODES_UNIQ=null;
 function buildCatalog(){
   CATALOG=[];
   teams.forEach(function(t){
-    numsOf(t).forEach(function(n){
-      CATALOG.push({code:t.code,num:n,key:t.code+pad(n)});
-    });
+    numsOf(t).forEach(function(n){CATALOG.push({code:t.code,num:n,key:t.code+pad(n)})});
   });
   CODES_UNIQ=teams.map(function(t){return t.code});
   window.SCAN_CATALOG_SIZE=CATALOG.length;
@@ -64,10 +64,7 @@ function dist(a,b){
   }
   return dp[m][n];
 }
-function sim(a,b){
-  if(!a||!b)return 0;
-  return Math.max(0,1-dist(a,b)/Math.max(a.length,b.length));
-}
+function sim(a,b){if(!a||!b)return 0;return Math.max(0,1-dist(a,b)/Math.max(a.length,b.length))}
 
 /* ---------- tokens ---------- */
 function tokens(raw){
@@ -84,7 +81,7 @@ function tokens(raw){
   return out;
 }
 
-/* ---------- match em 2 estágios: sigla → número ---------- */
+/* ---------- match 2 estágios ---------- */
 function match(raw,topN){
   var tks=tokens(raw);if(!tks.length)return [];
   var lockEl=E("scanLockTeam"),lock=lockEl&&lockEl.checked;
@@ -92,8 +89,6 @@ function match(raw,topN){
   tks.forEach(function(tk){
     var qs=tk.s,qn=parseInt(tk.n,10);
     if(isNaN(qn))return;
-
-    /* estágio 1 — só 49 comparações de sigla */
     var sigs=[];
     codesUniq().forEach(function(code){
       var ss=sim(qs,code);
@@ -102,8 +97,6 @@ function match(raw,topN){
     if(!sigs.length)return;
     sigs.sort(function(a,b){return b.ss-a.ss});
     sigs=sigs.slice(0,6);
-
-    /* estágio 2 — só os números das siglas sobreviventes */
     sigs.forEach(function(s){
       var t=T[s.code];if(!t)return;
       numsOf(t).forEach(function(num){
@@ -119,8 +112,7 @@ function match(raw,topN){
         if(lock&&lastTeam&&s.code!==lastTeam)sc-=.35;
         sc=Math.max(0,Math.min(1,sc));
         var key=s.code+pad(num);
-        if(!best[key]||best[key].score<sc)
-          best[key]={code:s.code,num:num,key:key,score:sc};
+        if(!best[key]||best[key].score<sc)best[key]={code:s.code,num:num,key:key,score:sc};
       });
     });
   });
@@ -129,48 +121,130 @@ function match(raw,topN){
 }
 window.scanMatch=match;
 
-/* ---------- pré-processamento ---------- */
-function grabROI(){
-  var w=video.videoWidth,h=video.videoHeight;
-  if(!w||!h)return null;
-  var sx=Math.round(w*CFG.ROI.x),sy=Math.round(h*CFG.ROI.y),
-      sw=Math.round(w*CFG.ROI.w),sh=Math.round(h*CFG.ROI.h);
-  cvs.width=sw*CFG.SCALE;cvs.height=sh*CFG.SCALE;
-  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
-  ctx.drawImage(video,sx,sy,sw,sh,0,0,cvs.width,cvs.height);
-  return cvs;
+/* =====================================================================
+   DETECÇÃO DA PÍLULA
+   ===================================================================== */
+function frameGray(){
+  var vw=video.videoWidth,vh=video.videoHeight;
+  if(!vw||!vh)return null;
+  var sc=Math.min(1,CFG.WORK_W/vw);
+  var W=det.width=Math.round(vw*sc),H=det.height=Math.round(vh*sc);
+  dctx.drawImage(video,0,0,W,H);
+  var d=dctx.getImageData(0,0,W,H).data,g=new Uint8Array(W*H),sum=0;
+  for(var i=0,p=0;p<g.length;i+=4,p++){
+    g[p]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;
+    sum+=g[p];
+  }
+  return {g:g,W:W,H:H,mean:sum/g.length,scale:sc};
 }
-function binarize(canvas,invert){
-  var W=canvas.width,H=canvas.height,c=canvas.getContext("2d");
-  var img=c.getImageData(0,0,W,H),d=img.data,N=W*H;
-  var gray=new Float32Array(N),i,p;
-  for(i=0,p=0;p<N;i+=4,p++)gray[p]=.299*d[i]+.587*d[i+1]+.114*d[i+2];
-  var it=new Float64Array((W+1)*(H+1));
-  for(var y=0;y<H;y++){
-    var rs=0;
-    for(var x=0;x<W;x++){
-      rs+=gray[y*W+x];
-      it[(y+1)*(W+1)+(x+1)]=it[y*(W+1)+(x+1)]+rs;
+
+/* connected components sobre pixels ESCUROS */
+function darkBlobs(f,factor){
+  var W=f.W,H=f.H,g=f.g,t=f.mean*factor;
+  var lab=new Int8Array(W*H),q=new Int32Array(W*H),out=[];
+  for(var s=0;s<g.length;s++){
+    if(g[s]>=t||lab[s])continue;
+    var head=0,tail=0;q[tail++]=s;lab[s]=1;
+    var minX=W,maxX=0,minY=H,maxY=0,n=0;
+    while(head<tail){
+      var p=q[head++],x=p%W,y=(p/W)|0;n++;
+      if(x<minX)minX=x; if(x>maxX)maxX=x;
+      if(y<minY)minY=y; if(y>maxY)maxY=y;
+      for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){
+        var nx=x+dx,ny=y+dy;
+        if(nx<0||ny<0||nx>=W||ny>=H)continue;
+        var np=ny*W+nx;
+        if(!lab[np]&&g[np]<t){lab[np]=1;q[tail++]=np}
+      }
     }
+    if(n>60)out.push({minX:minX,maxX:maxX,minY:minY,maxY:maxY,n:n});
   }
-  var r=Math.max(10,Math.round(W/22));
-  work.width=W;work.height=H;
-  var out=wctx.createImageData(W,H),o=out.data;
-  for(var yy=0;yy<H;yy++){
-    var y1=Math.max(0,yy-r),y2=Math.min(H-1,yy+r);
-    for(var xx=0;xx<W;xx++){
-      var x1=Math.max(0,xx-r),x2=Math.min(W-1,xx+r);
-      var area=(x2-x1+1)*(y2-y1+1);
-      var s=it[(y2+1)*(W+1)+(x2+1)]-it[y1*(W+1)+(x2+1)]
-           -it[(y2+1)*(W+1)+x1]+it[y1*(W+1)+x1];
-      var mean=s/area,v=gray[yy*W+xx];
-      var on=invert?(v>mean+6):(v<mean-6);
-      var g=on?0:255,k=(yy*W+xx)*4;
-      o[k]=o[k+1]=o[k+2]=g;o[k+3]=255;
-    }
+  return out;
+}
+
+/* filtra: retângulo ~2–5.5:1, cheio, com texto claro dentro */
+function pickPill(f){
+  var cands=[],factors=[.66,.55,.78],i;
+  for(i=0;i<factors.length&&!cands.length;i++){
+    var blobs=darkBlobs(f,factors[i]),area=f.W*f.H;
+    blobs.forEach(function(b){
+      var bw=b.maxX-b.minX+1,bh=b.maxY-b.minY+1,a=bw*bh,ar=bw/bh;
+      var horiz=ar>=1.7&&ar<=6, vert=(1/ar)>=1.7&&(1/ar)<=6;   // pílula girada 90°
+      if(!horiz&&!vert)return;
+      if(a<area*.0015||a>area*.10)return;
+      if(b.n/a<.68)return;                                     // quase retangular
+      var light=0,tot=0;
+      for(var y=b.minY;y<=b.maxY;y+=2)for(var x=b.minX;x<=b.maxX;x+=2){
+        tot++; if(f.g[y*f.W+x]>Math.max(150,f.mean*1.05))light++;
+      }
+      var ratio=light/tot;
+      if(ratio<.05||ratio>.50)return;
+      cands.push({minX:b.minX,minY:b.minY,bw:bw,bh:bh,
+                  vert:vert&&!horiz,score:a*ratio*(horiz?1:.9)});
+    });
   }
-  wctx.putImageData(out,0,0);
-  return work;
+  cands.sort(function(a,b){return b.score-a.score});
+  return cands[0]||null;
+}
+
+/* recorta em resolução cheia, upscale + inverte (texto branco → preto) */
+function cropPill(pill,sc,pass){
+  var pad=Math.round(Math.max(3,pill.bh*.12));
+  var sx=Math.max(0,(pill.minX-pad)/sc), sy=Math.max(0,(pill.minY-pad)/sc);
+  var sw=(pill.bw+pad*2)/sc, sh=(pill.bh+pad*2)/sc;
+  sw=Math.min(sw,video.videoWidth-sx); sh=Math.min(sh,video.videoHeight-sy);
+
+  var H=CFG.OCR_H,W=Math.max(24,Math.round(sw/sh*H));
+  crop.width=pill.vert?H:W; crop.height=pill.vert?W:H;
+  cctx.save();
+  cctx.imageSmoothingEnabled=true;cctx.imageSmoothingQuality="high";
+  if(pill.vert){ cctx.translate(crop.width,0); cctx.rotate(Math.PI/2); }
+  cctx.drawImage(video,sx,sy,sw,sh,0,0,pill.vert?W:W,pill.vert?H:H);
+  cctx.restore();
+
+  // se veio girado, gira p/ horizontal
+  if(pill.vert){
+    var tmp=document.createElement("canvas");tmp.width=W;tmp.height=H;
+    var t=tmp.getContext("2d");
+    t.translate(W/2,H/2);t.rotate(-Math.PI/2);
+    t.drawImage(crop,-crop.width/2,-crop.height/2);
+    crop.width=W;crop.height=H;cctx.drawImage(tmp,0,0);
+  }
+
+  // binarização: pass ímpar tenta polaridade oposta (pílula clara)
+  var im=cctx.getImageData(0,0,crop.width,crop.height),d=im.data,N=crop.width*crop.height;
+  var gs=new Uint8Array(N),sum=0,k;
+  for(var i=0,p=0;p<N;i+=4,p++){gs[p]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;sum+=gs[p]}
+  var th=sum/N;
+  for(k=0;k<N;k++){
+    var on=(pass%2===0)?(gs[k]>th):(gs[k]<th);   // texto = pixels claros
+    var v=on?0:255,j=k*4;
+    d[j]=d[j+1]=d[j+2]=v;d[j+3]=255;
+  }
+  cctx.putImageData(im,0,0);
+  return crop;
+}
+
+/* fallback: ROI larga, sem pílula detectada */
+function cropFallback(){
+  var vw=video.videoWidth,vh=video.videoHeight,R=CFG.FALLBACK_ROI;
+  var sx=vw*R.x,sy=vh*R.y,sw=vw*R.w,sh=vh*R.h;
+  crop.width=Math.round(sw*1.6);crop.height=Math.round(sh*1.6);
+  cctx.imageSmoothingQuality="high";
+  cctx.drawImage(video,sx,sy,sw,sh,0,0,crop.width,crop.height);
+  return crop;
+}
+
+/* dica visual: move o #scanBox (se existir) para cima da pílula */
+function hint(pill,sc){
+  var box=E("scanBox");if(!box)return;
+  if(!pill){box.style.opacity=".35";return}
+  var vw=video.getBoundingClientRect(),k=vw.width/(video.videoWidth*sc);
+  box.style.opacity="1";
+  box.style.left=(pill.minX*k)+"px";
+  box.style.top=(pill.minY*k)+"px";
+  box.style.width=(pill.bw*k)+"px";
+  box.style.height=(pill.bh*k)+"px";
 }
 
 /* ---------- OCR ---------- */
@@ -180,7 +254,7 @@ async function getWorker(){
   paintScanning("carregando OCR…");
   worker=await Tesseract.createWorker("eng");
   await worker.setParameters({
-    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",
     user_defined_dpi:"300"
   });
   log("✔ OCR pronto");
@@ -198,13 +272,18 @@ async function read(){
   if(busy)return;
   if(!stream){log("⚠️ inicie a câmera");return}
   busy=true;
-  var votes={},reads=0;
-  paintScanning("lendo…");
+  var votes={},reads=0,found=false;
+  paintScanning("procurando o código…");
   try{
-    for(var f=0;f<CFG.BURST;f++){
-      var roi=grabROI();if(!roi)break;
-      var img=binarize(roi,f%2===1);
-      var psm=(f%3===0)?7:(f%3===1)?11:6;
+    var f=frameGray();
+    if(!f){busy=false;return}
+    var pill=pickPill(f);
+    hint(pill,f.scale);
+    if(pill)paintScanning("lendo "+pill.bw+"×"+pill.bh+"…");
+
+    for(var i=0;i<CFG.BURST;i++){
+      var img=pill?cropPill(pill,f.scale,i):cropFallback();
+      var psm=pill?(i<2?7:8):11;
       var txt="";
       try{txt=await ocr(img,psm)}catch(e){log("⚠️ "+e.message);break}
       if(txt.trim()){
@@ -214,8 +293,12 @@ async function read(){
           if(!votes[c.key])votes[c.key]={code:c.code,num:c.num,key:c.key,w:0,hits:0};
           votes[c.key].w+=w;votes[c.key].hits++;
         });
+        // atalho: 2 leituras concordando com score alto → já resolve
+        var k=Object.keys(votes);
+        if(k.length===1&&votes[k[0]].hits>=2){found=true;break}
       }
-      await new Promise(function(r){setTimeout(r,60)});
+      if(!pill&&i>=1)break;               // sem pílula, não insiste
+      await new Promise(function(r){setTimeout(r,40)});
     }
   }catch(e){log("⚠️ "+e.message)}
 
@@ -224,16 +307,16 @@ async function read(){
   if(!rank.length){decide(null,[],reads);busy=false;return}
   rank.forEach(function(r){r.score=Math.min(1,r.w/Math.max(reads,1))});
   var margin=rank[1]?(rank[0].score-rank[1].score):1;
-  decide(rank[0],rank,reads,margin);
+  decide(rank[0],rank,reads,found?1:margin);
   busy=false;
 }
 
-/* ---------- decisão ---------- */
+/* ---------- decisão / registro / painéis (iguais ao v3) ---------- */
 function decide(top,rank,reads,margin){
   if(!top){
-    paintFail("Não consegui ler o código","Aproxime, evite reflexo e mantenha o verso plano");
+    paintFail("Não encontrei o código","Mostre o canto com a pílula escura (ex.: TUN 7)");
     flash(true);feedback(true);
-    log("✘ nenhuma leitura útil ("+reads+" frames)");
+    log("✘ nenhuma leitura útil ("+reads+" tentativas)");
     return;
   }
   if(top.score>=CFG.AUTO_SCORE&&margin>=CFG.AUTO_MARGIN){commit(top.code,top.num,top.score);return}
@@ -243,24 +326,19 @@ function decide(top,rank,reads,margin){
       return r.code+pad(r.num)+" "+Math.round(r.score*100)+"%"}).join(" · "));
     return;
   }
-  paintFail("Leitura com baixa confiança","Tente de novo ou digite o código abaixo");
+  paintFail("Leitura com baixa confiança","Aproxime um pouco ou digite o código abaixo");
   flash(true);feedback(true);
 }
-
-/* ---------- registra ---------- */
 function commit(code,num,score){
   if(!validNum(code,num)){paintFail("Código inválido: "+code+" "+num,"");return}
   var key=code+pad(num),now=Date.now();
   if(key===lastKey&&now-lastAt<CFG.COOLDOWN){paintScanning("mesma figurinha — aguarde");return}
   lastKey=key;lastAt=now;lastTeam=code;
-
   setQty(code,num,getQty(code,num)+1);
   var q=getQty(code,num);
   session.unshift({code:code,num:num,q:q});
   if(session.length>28)session.pop();
-
-  paintOK(code,num,q,score);
-  renderSession();
+  paintOK(code,num,q,score);renderSession();
   flash(false);feedback(false);
   if(window.renderStock){renderStock(val("searchStock"));updStockCounter();updDemPill()}
   if(window.renderDrawerStats)renderDrawerStats();
@@ -275,8 +353,6 @@ function undo(i){
   toast("↩️ "+it.code+" "+pad(it.num)+" desfeito");
   log("↩️ desfeito "+it.code+" "+pad(it.num));
 }
-
-/* ---------- painéis ---------- */
 function paintScanning(m){
   E("scanResult").className="scan-result";
   E("scanResult").innerHTML='<div class="sr-scan">🔍 '+m+'</div>';
@@ -318,8 +394,8 @@ function renderSession(){
     var s=document.createElement("span");
     s.className="ss-chip"+(i===0?" new":"");
     s.innerHTML=(flagURL(it.code,20)?'<img src="'+flagURL(it.code,20)+'">':"")+
-      it.code+" "+pad(it.num)+
-      (isShiny(it.code,it.num)?" ✨":"")+' <button title="desfazer">×</button>';
+      it.code+" "+pad(it.num)+(isShiny(it.code,it.num)?" ✨":"")+
+      ' <button title="desfazer">×</button>';
     s.querySelector("button").onclick=function(){undo(i)};
     b.appendChild(s);
   });
@@ -337,20 +413,18 @@ async function start(){
     video.srcObject=stream;await video.play();
     try{
       var tr=stream.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};
-      if(cap.focusMode&&cap.focusMode.indexOf("continuous")>-1)
-        await tr.applyConstraints({advanced:[{focusMode:"continuous"}]});
+      var adv=[];
+      if(cap.focusMode&&cap.focusMode.indexOf("continuous")>-1)adv.push({focusMode:"continuous"});
+      if(cap.exposureMode&&cap.exposureMode.indexOf("continuous")>-1)adv.push({exposureMode:"continuous"});
+      if(adv.length)await tr.applyConstraints({advanced:adv});
     }catch(e){}
     log("📷 câmera ativa "+video.videoWidth+"×"+video.videoHeight);
-    paintScanning("preparando…");
     await getWorker();
-    paintScanning("pronto — encaixe o código");
+    paintScanning("pronto — mostre o verso, sem precisar encaixar");
     if(E("scanAuto").checked)startLoop();
   }catch(e){paintFail("Erro na câmera",e.message);log("❌ "+e.message)}
 }
-function startLoop(){
-  clearInterval(loop);
-  loop=setInterval(function(){if(!busy)read()},CFG.LOOP_MS);
-}
+function startLoop(){clearInterval(loop);loop=setInterval(function(){if(!busy)read()},CFG.LOOP_MS)}
 function stop(quiet){
   clearInterval(loop);loop=null;
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
@@ -369,8 +443,7 @@ function manual(){
   if(!raw.trim())return;
   var p=parseList(raw),codes=Object.keys(p.found),n=0;
   if(codes.length){
-    codes.forEach(function(c){p.found[c].forEach(function(num){
-      lastTeam=c;commit(c,num,1);n++})});
+    codes.forEach(function(c){p.found[c].forEach(function(num){lastTeam=c;commit(c,num,1);n++})});
     E("scanManual").value="";
     if(n>1)toast("➕ "+n+" adicionadas");
     return;
@@ -383,8 +456,8 @@ function manual(){
 /* ---------- init ---------- */
 document.addEventListener("DOMContentLoaded",function(){
   video=E("scanVideo");
-  cvs=document.createElement("canvas");ctx=cvs.getContext("2d",{willReadFrequently:true});
-  work=document.createElement("canvas");wctx=work.getContext("2d",{willReadFrequently:true});
+  det=document.createElement("canvas");dctx=det.getContext("2d",{willReadFrequently:true});
+  crop=document.createElement("canvas");cctx=crop.getContext("2d",{willReadFrequently:true});
   buildCatalog();
   log("📚 catálogo: "+CATALOG.length+" códigos possíveis");
 
