@@ -1,5 +1,6 @@
 /* ======================================================
-   DADOS — ordem do álbum: FWC (00–19) → grupos A..L → HIST
+   DADOS — ordem do álbum: FWC (00–19) → grupos A..L
+   980 cromos = 48 seleções × 20 + 20 especiais (FWC)
    ====================================================== */
 var teams=[
  {code:"FWC",name:"FIFA World Cup 26",flag:"🏆",iso:null,qty:20,group:null,allShiny:true,firstZero:true},
@@ -62,9 +63,7 @@ var teams=[
  {code:"ENG",name:"Inglaterra",iso:"gb-eng",qty:20,group:"L"},
  {code:"CRO",name:"Croácia",iso:"hr",qty:20,group:"L"},
  {code:"GHA",name:"Gana",iso:"gh",qty:20,group:"L"},
- {code:"PAN",name:"Panamá",iso:"pa",qty:20,group:"L"},
-
- {code:"HIST",name:"Seleções Históricas",flag:"⭐",iso:null,qty:20,group:null,allShiny:true}
+ {code:"PAN",name:"Panamá",iso:"pa",qty:20,group:"L"}
 ];
 
 var T={},ORDER={};
@@ -73,7 +72,7 @@ teams.forEach(function(t,i){T[t.code]=t;ORDER[t.code]=i});
 var GROUP_TITLE={A:"Grupo A",B:"Grupo B",C:"Grupo C",D:"Grupo D",E:"Grupo E",F:"Grupo F",
  G:"Grupo G",H:"Grupo H",I:"Grupo I",J:"Grupo J",K:"Grupo K",L:"Grupo L"};
 
-/* ---------- BANDEIRAS ---------- */
+/* ---------- BANDEIRAS (imagem — para a UI) ---------- */
 function flagURL(code,w){
   var t=T[code]; if(!t||!t.iso)return null;
   w=w||40; return "https://flagcdn.com/"+w+"x"+Math.round(w*0.75)+"/"+t.iso+".png";
@@ -86,40 +85,73 @@ function flagHTML(code){
     "onerror=\"this.outerHTML='<span class=&quot;fico&quot;>🏳️</span>'\">";
 }
 
-/* ---------- CRAQUES ---------- */
-var ACES={
- "POR-15":"Cristiano Ronaldo","NOR-15":"Erling Haaland","ESP-15":"Lamine Yamal",
- "FRA-20":"Kylian Mbappé","NED-17":"Memphis Depay","ARG-17":"Lionel Messi",
- "BRA-15":"Vinícius Júnior","ENG-15":"Jude Bellingham","BEL-15":"Kevin De Bruyne",
- "EGY-15":"Mohamed Salah","KOR-15":"Son Heung-min","URU-15":"Federico Valverde",
- "COL-15":"Luis Díaz","MAR-15":"Achraf Hakimi","CRO-15":"Luka Modrić",
- "GER-15":"Jamal Musiala","JPN-15":"Takefusa Kubo","SEN-15":"Sadio Mané",
- "MEX-15":"Santiago Giménez","USA-15":"Christian Pulisic","SWE-15":"Viktor Gyökeres",
- "CIV-15":"Simon Adingra","ECU-15":"Moisés Caicedo","CAN-15":"Alphonso Davies",
- "AUS-15":"Jackson Irvine","SUI-15":"Granit Xhaka","TUR-15":"Arda Güler",
- "ALG-15":"Riyad Mahrez","AUT-15":"Marcel Sabitzer","GHA-15":"Mohammed Kudus",
- "PAN-15":"Adalberto Carrasquilla","IRN-15":"Mehdi Taremi","TUN-15":"Hannibal Mejbri",
- "PAR-15":"Miguel Almirón","CZE-15":"Patrik Schick","RSA-15":"Percy Tau",
- "QAT-15":"Akram Afif","KSA-15":"Salem Al-Dawsari","NZL-15":"Chris Wood",
- "SCO-15":"Scott McTominay","CPV-15":"Ryan Mendes","UZB-15":"Eldor Shomurodov",
- "JOR-15":"Musa Al-Taamari","IRQ-15":"Aymen Hussein","COD-15":"Cédric Bakambu",
- "HAI-15":"Frantzdy Pierrot","CUW-15":"Juninho Bacuna","BIH-15":"Edin Džeko"
+/* ---------- BANDEIRAS (emoji — para listas de texto/WhatsApp) ---------- */
+function isoToEmoji(iso){
+  if(!iso)return null;
+  if(iso.indexOf("-")>-1){                     /* gb-eng, gb-sct */
+    var tag=iso.replace(/-/g,"").toLowerCase(),s="\uD83C\uDFF4";
+    for(var i=0;i<tag.length;i++)s+=String.fromCodePoint(0xE0000+tag.charCodeAt(i));
+    return s+"\uDB40\uDC7F";
+  }
+  if(!/^[a-z]{2}$/i.test(iso))return null;
+  var u=iso.toUpperCase();
+  return String.fromCodePoint(0x1F1E6+u.charCodeAt(0)-65,0x1F1E6+u.charCodeAt(1)-65);
+}
+function flagEmoji(code){
+  var t=T[code]; if(!t)return "🏳️";
+  return isoToEmoji(t.iso)||t.flag||"🏳️";
+}
+
+/* ---------- CRAQUES (nível seleção — SEM número) ----------
+   A Panini não divulga checklist oficial com numeração. A ordem
+   varia por seleção: emblema=1, foto do time flutua (ex: ALG-13),
+   jogadores em ordem tática. Guardamos só QUEM é o craque.       */
+var ACES_BY_TEAM={
+ POR:[{name:"Cristiano Ronaldo"}], NOR:[{name:"Erling Haaland"}],
+ ESP:[{name:"Lamine Yamal"}],      FRA:[{name:"Kylian Mbappé"}],
+ NED:[{name:"Memphis Depay"}],     ARG:[{name:"Lionel Messi"}],
+ BRA:[{name:"Vinícius Júnior"}],   ENG:[{name:"Jude Bellingham"}],
+ BEL:[{name:"Kevin De Bruyne"}],   EGY:[{name:"Mohamed Salah"}],
+ KOR:[{name:"Son Heung-min"}],     URU:[{name:"Federico Valverde"}],
+ COL:[{name:"Luis Díaz"}],         MAR:[{name:"Achraf Hakimi"}],
+ CRO:[{name:"Luka Modrić"}],       GER:[{name:"Jamal Musiala"}],
+ JPN:[{name:"Takefusa Kubo"}],     SEN:[{name:"Sadio Mané"}],
+ MEX:[{name:"Santiago Giménez"}],  USA:[{name:"Christian Pulisic"}],
+ SWE:[{name:"Viktor Gyökeres"}],   CIV:[{name:"Simon Adingra"}],
+ ECU:[{name:"Moisés Caicedo"}],    CAN:[{name:"Alphonso Davies"}],
+ AUS:[{name:"Jackson Irvine"}],    SUI:[{name:"Granit Xhaka"}],
+ TUR:[{name:"Arda Güler"}],        ALG:[{name:"Riyad Mahrez"}],
+ AUT:[{name:"Marcel Sabitzer"}],   GHA:[{name:"Mohammed Kudus"}],
+ PAN:[{name:"Adalberto Carrasquilla"}], IRN:[{name:"Mehdi Taremi"}],
+ TUN:[{name:"Hannibal Mejbri"}],   PAR:[{name:"Miguel Almirón"}],
+ CZE:[{name:"Patrik Schick"}],     RSA:[{name:"Percy Tau"}],
+ QAT:[{name:"Akram Afif"}],        KSA:[{name:"Salem Al-Dawsari"}],
+ NZL:[{name:"Chris Wood"}],        SCO:[{name:"Scott McTominay"}],
+ CPV:[{name:"Ryan Mendes"}],       UZB:[{name:"Eldor Shomurodov"}],
+ JOR:[{name:"Musa Al-Taamari"}],   IRQ:[{name:"Aymen Hussein"}],
+ COD:[{name:"Cédric Bakambu"}],    HAI:[{name:"Frantzdy Pierrot"}],
+ CUW:[{name:"Juninho Bacuna"}],    BIH:[{name:"Edin Džeko"}]
 };
+
 function pad(n){return String(n).padStart(2,"0")}
+
+/* ---- API antiga preservada: craque por número é desconhecido ---- */
+var ACES={};
 function aceKey(c,n){return c+"-"+pad(n)}
-function isAce(c,n){return !!ACES[aceKey(c,n)]}
-function aceName(c,n){return ACES[aceKey(c,n)]||""}
-function aceShort(c,n){var s=aceName(c,n);return s?s.split(" ").pop():""}
-function aceLabel(c,n){return c+" "+pad(n)+" — "+aceName(c,n)}
-var ACES_BY_TEAM={};
-Object.keys(ACES).forEach(function(k){
-  var p=k.split("-"),c=p[0],n=parseInt(p[1],10);
-  if(!ACES_BY_TEAM[c])ACES_BY_TEAM[c]=[];
-  ACES_BY_TEAM[c].push({num:n,name:ACES[k]});
-});
-Object.keys(ACES_BY_TEAM).forEach(function(c){
-  ACES_BY_TEAM[c].sort(function(a,b){return a.num-b.num});
-});
+function isAce(){return false}
+function aceName(){return ""}
+function aceShort(){return ""}
+function aceLabel(){return ""}
+
+/* ---- API nova: nível seleção ---- */
+function teamHasAce(code){return !!ACES_BY_TEAM[code]}
+function teamAceNames(code){
+  return (ACES_BY_TEAM[code]||[]).map(function(a){return a.name});
+}
+function teamAceLabel(code){
+  var n=teamAceNames(code);
+  return n.length?n.join(" • "):"";
+}
 
 /* ---------- NUMERAÇÃO ---------- */
 function firstOf(t){return t.firstZero?0:1}
@@ -140,7 +172,6 @@ function validNum(code,num){
 }
 function isShiny(code,num){
   var t=T[code]; if(!t)return false;
-  if(isAce(code,num))return false;
   if(t.allShiny)return true;
   return num===firstOf(t);
 }
@@ -150,16 +181,14 @@ function contar(map){
   var norm=0,shi=0,ace=0,lista=[];
   Object.keys(map||{}).sort(function(a,b){return ORDER[a]-ORDER[b]}).forEach(function(c){
     (map[c]||[]).slice().sort(function(a,b){return a-b}).forEach(function(n){
-      if(isAce(c,n)){ace++;lista.push(aceLabel(c,n))}
-      else if(isShiny(c,n))shi++;
+      if(isShiny(c,n))shi++;
       else norm++;
     });
   });
   return {normais:norm,brilhantes:shi,craques:ace,aces:lista,total:norm+shi+ace};
 }
 function detalhe(r){
-  var d="• Normais: "+r.normais+"\n• Brilhantes: "+r.brilhantes+"\n• Craques: "+r.craques+"\n";
-  if(r.craques)d+=r.aces.map(function(a){return "     ⭐ "+a}).join("\n")+"\n";
+  var d="• Normais: "+r.normais+"\n• Brilhantes: "+r.brilhantes+"\n";
   return d+"• TOTAL: "+r.total;
 }
 function ranges(arr){

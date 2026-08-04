@@ -85,36 +85,29 @@ function buildList(map,title){
     any=true;
     var t=T[c];
     if(t.group&&t.group!==lastG){lastG=t.group;out+="── "+GROUP_TITLE[t.group]+" ──\n"}
-    out+=(t.flag||"🏳️")+" "+t.name+" ("+c+")\n"+nums.map(function(n){
-      if(isAce(c,n))return c+" "+pad(n)+"⭐ ("+aceName(c,n)+")";
+    out+=flagEmoji(c)+" "+t.name+" ("+c+")\n"+nums.map(function(n){
       return c+" "+pad(n)+(isShiny(c,n)?"✨":"");
     }).join(", ")+"\n\n";
   });
   if(!any)return "Nenhuma figurinha selecionada.";
   var r=contar(map);
   out+="━━━━━━━━━━━━━━━\n📊 *RESUMO*\n";
-  out+="Normais: *"+r.normais+"*\n✨ Brilhantes: *"+r.brilhantes+"*\n⭐ Craques: *"+r.craques+"*\n";
-  if(r.craques)r.aces.forEach(function(a){out+="   • "+a+"\n"});
+  out+="Normais: *"+r.normais+"*\n✨ Brilhantes: *"+r.brilhantes+"*\n";
   out+="🎯 TOTAL: *"+r.total+"* figurinhas\n━━━━━━━━━━━━━━━\n";
-  out+="_✨ = brilhante (a primeira de cada seleção, FWC e Históricas)_\n_⭐ = craque_";
+  out+="_✨ = brilhante (a primeira de cada seleção e todas as FWC)_";
   return out;
 }
 function badgesResumo(map){
   var r=contar(map),so=contar(semEstoqueDe(map));
   var h='<span class="badge">Normais: '+r.normais+'</span>'+
         '<span class="badge sh">✨ Brilhantes: '+r.brilhantes+'</span>'+
-        '<span class="badge ac">⭐ Craques: '+r.craques+'</span>'+
         '<span class="badge ok">TOTAL: '+r.total+'</span>';
   if(so.total)h+='<span class="badge so">🔴 s/ estoque: '+so.total+'</span>';
   return h;
 }
 function pintarAces(elId,map,titulo){
   var el=document.getElementById(elId); if(!el)return;
-  var r=contar(map);
-  if(!r.craques){el.style.display="none";el.innerHTML="";return}
-  el.style.display="block";
-  el.innerHTML="⭐ <b>"+(titulo||"Craques")+" ("+r.craques+")</b><br>"+
-    r.aces.map(function(a){return "• "+a}).join("<br>");
+  el.style.display="none";el.innerHTML="";
 }
 
 /* ---------- BOTÕES DE FIGURINHA ---------- */
@@ -126,23 +119,21 @@ function estadoBtn(code,num,sel){
 function classeBtn(code,num,extra){
   var c="sticker-btn";
   if(extra)c+=" "+extra;
-  if(isAce(code,num))c+=" ace";
-  else if(isShiny(code,num))c+=" shiny";
+  if(isShiny(code,num))c+=" shiny";
   return c;
 }
 function innerBtn(code,num,qty,demQty){
   var badge="";
   if(qty>1)badge='<span class="qty-badge">'+qty+'</span>';
   else if(demQty>0)badge='<span class="dem-badge">'+demQty+'</span>';
-  return pad(num)+badge+(isAce(code,num)?'<span class="acen">'+aceShort(code,num)+'</span>':"");
+  return pad(num)+badge;
 }
 function mkBtn(code,num,extraClass,qty,demQty){
   var b=document.createElement("button");
   b.className=classeBtn(code,num,extraClass);
   b.innerHTML=innerBtn(code,num,qty,demQty);
   var tt=[code+" "+pad(num)];
-  if(isAce(code,num))tt.push("⭐ Craque: "+aceName(code,num));
-  else if(isShiny(code,num))tt.push("✨ Brilhante");
+  if(isShiny(code,num))tt.push("✨ Brilhante");
   if(!temEstoque(code,num))tt.push("sem estoque — pode selecionar mesmo assim");
   if(demQty>0)tt.push(demQty+" pessoa(s) procurando");
   b.title=tt.join(" • ");
@@ -159,9 +150,8 @@ function teamHeader(t){
   var have=Object.keys(stock[t.code]||{}).length;
   h+='<span class="tct">'+have+'/'+countNums(t.code)+'</span></span></div>';
   if(ACES_BY_TEAM[t.code]){
-    h+='<div class="acelist">'+ACES_BY_TEAM[t.code].map(function(a){
-      return "⭐ "+t.code+" "+pad(a.num)+" — <b>"+a.name+"</b>";
-    }).join(" &nbsp;•&nbsp; ")+'</div>';
+    h+='<div class="acelist">⭐ Craque desta seleção: <b>'+teamAceLabel(t.code)+
+       '</b> — número no álbum não confirmado</div>';
   }
   return h;
 }
@@ -170,8 +160,7 @@ function groupBand(t){
   d.className="group-label";
   var flags=teams.filter(function(x){return x.group===t.group&&x.iso})
     .map(function(x){return '<img src="'+flagURL(x.code,20)+'" alt="'+x.code+'">'}).join("");
-  var titulo=t.group?GROUP_TITLE[t.group]
-    :(t.code==="FWC"?"🏆 FIFA World Cup 26 (00–19)":"⭐ Seleções Históricas");
+  var titulo=t.group?GROUP_TITLE[t.group]:"🏆 FIFA World Cup 26 (00–19)";
   d.innerHTML='<span class="grp-dot"></span><b>'+titulo+'</b><span class="gflags">'+flags+'</span>';
   var probe=document.createElement("div");probe.className="team g-"+(t.group||"none");
   probe.style.display="none";document.body.appendChild(probe);
@@ -252,7 +241,6 @@ function updStockCounter(){
   $("#stockCounter").innerHTML=
     '<span class="badge">Normais: '+r.normais+'</span>'+
     '<span class="badge sh">✨ Brilhantes: '+r.brilhantes+'</span>'+
-    '<span class="badge ac">⭐ Craques: '+r.craques+'</span>'+
     '<span class="badge ok">'+r.total+' diferentes</span>'+
     '<span class="badge">'+stockUnidades()+' unidades</span>';
   pintarAces("stockAces",map);
@@ -297,7 +285,7 @@ function processarOferta(){
   if(rd.total)toast("🔎 "+rd.total+" que você não tem foram para 'Procuradas' — mas dá para selecionar","warn2");
   else{
     var ro=contar(offered);
-    toast(ro.total?("✅ "+ro.total+" disponíveis ("+ro.brilhantes+" ✨, "+ro.craques+" ⭐)")
+    toast(ro.total?("✅ "+ro.total+" disponíveis ("+ro.brilhantes+" ✨)")
                   :"Selecione o que quer oferecer","warn2");
   }
 }
@@ -329,7 +317,7 @@ function renderOferta(){
 function updOfCounter(){
   var sel=ordenaMapa(oferta.offered),req=contar(oferta.requested);
   $("#ofCounter").innerHTML='<span class="badge">Pediu: '+req.total+'</span>'+badgesResumo(sel);
-  pintarAces("ofAces",sel,"Craques na oferta");
+  pintarAces("ofAces",sel);
 }
 function ofMarcar(modo){
   if(!oferta)return;
@@ -404,7 +392,7 @@ function updLvCounter(){
   var sel=ordenaMapa(livreSel);
   $("#lvCounter").innerHTML=mapTotal(sel)?badgesResumo(sel)
     :'<span class="badge">Nenhuma figurinha selecionada</span>';
-  pintarAces("lvAces",sel,"Craques selecionados");
+  pintarAces("lvAces",sel);
 }
 function gerarListaLivre(){
   var sel=ordenaMapa(livreSel);
@@ -440,16 +428,14 @@ function renderDemanda(){
     '<span class="badge dm">Procuradas: '+r.total+'</span>'+
     '<span class="badge">Normais: '+r.normais+'</span>'+
     '<span class="badge sh">✨ '+r.brilhantes+'</span>'+
-    '<span class="badge ac">⭐ '+r.craques+'</span>'+
     '<span class="badge ok">'+Object.keys(pessoas).length+' pessoa(s)</span>';
-  pintarAces("demAces",map,"Craques procurados");
+  pintarAces("demAces",map);
 
   var lista=rank.filter(function(it){
     if(onlyHot&&it.count<2)return false;
     if(!f)return true;
     if((it.code+" "+pad(it.num)).toLowerCase().indexOf(f)>-1)return true;
     if(noAccent(T[it.code].name).toLowerCase().indexOf(f)>-1)return true;
-    if(isAce(it.code,it.num)&&noAccent(aceName(it.code,it.num)).toLowerCase().indexOf(f)>-1)return true;
     return it.clients.some(function(cl){return noAccent(cl).toLowerCase().indexOf(f)>-1});
   });
   var box=$("#demRanking");
@@ -463,8 +449,7 @@ function renderDemanda(){
   lista.forEach(function(it,i){
     var d=document.createElement("div");
     d.className="demrow"+(it.count>=2?" hot":"");
-    var tag=isAce(it.code,it.num)?'<span class="tagace">⭐ '+aceName(it.code,it.num)+'</span>'
-           :(isShiny(it.code,it.num)?'<span class="tagshiny">✨ brilhante</span>':"");
+    var tag=isShiny(it.code,it.num)?'<span class="tagshiny">✨ brilhante</span>':"";
     d.innerHTML='<div class="rank">'+(i+1)+'º</div>'+
       '<div class="info"><div class="code">'+flagHTML(it.code)+' '+it.code+' '+pad(it.num)+tag+'</div>'+
       '<div class="who">'+T[it.code].name+' • pedida por: '+it.clients.join(", ")+'</div></div>'+
@@ -499,7 +484,6 @@ function renderDemList(){
       '<div class="card-sub">Pediu '+todos.total+' que eu não tinha • ainda faltam '+
       '<b style="color:#ff9c9c">'+rp.total+'</b>'+
       (rp.total<todos.total?' • <span style="color:#8fe0ae">'+(todos.total-rp.total)+' já consegui</span>':'')+'</div>';
-    if(todos.craques)html+='<div class="card-ace">⭐ '+todos.aces.join(" • ")+'</div>';
     html+='<div class="card-actions"><button class="btn btn-sm">📋 Ver lista</button>'+
       '<button class="btn btn-sm red">🗑️ Excluir</button></div>'+
       '<div class="out" id="dem-'+d.id+'"></div>';
@@ -525,8 +509,7 @@ function gerarListaDemanda(){
   var map=demandaMap(),r=contar(map);
   var out="🔎 *PROCURO ESTAS FIGURINHAS* 🔎\n_Catanos Figurinhas · Copa 2026 — troco ou compro_\n\n";
   Object.keys(map).forEach(function(c){
-    out+=(T[c].flag||"🏳️")+" "+T[c].name+" ("+c+")\n"+map[c].map(function(n){
-      if(isAce(c,n))return c+" "+pad(n)+"⭐ ("+aceName(c,n)+")";
+    out+=flagEmoji(c)+" "+T[c].name+" ("+c+")\n"+map[c].map(function(n){
       return c+" "+pad(n)+(isShiny(c,n)?"✨":"");
     }).join(", ")+"\n\n";
   });
@@ -534,15 +517,13 @@ function gerarListaDemanda(){
   if(hot.length){
     out+="🔥 *MAIS PEDIDAS* (prioridade)\n";
     hot.slice(0,10).forEach(function(it){
-      out+="   • "+it.code+" "+pad(it.num)+
-        (isAce(it.code,it.num)?"⭐ ("+aceName(it.code,it.num)+")":(isShiny(it.code,it.num)?"✨":""))+
+      out+="   • "+it.code+" "+pad(it.num)+(isShiny(it.code,it.num)?"✨":"")+
         " — "+it.count+" pessoas querem\n";
     });
     out+="\n";
   }
   out+="━━━━━━━━━━━━━━━\n📊 *RESUMO*\n";
-  out+="Normais: *"+r.normais+"*\n✨ Brilhantes: *"+r.brilhantes+"*\n⭐ Craques: *"+r.craques+"*\n";
-  if(r.craques)r.aces.forEach(function(a){out+="   • "+a+"\n"});
+  out+="Normais: *"+r.normais+"*\n✨ Brilhantes: *"+r.brilhantes+"*\n";
   out+="🎯 TOTAL PROCURADO: *"+r.total+"* figurinhas\n━━━━━━━━━━━━━━━\n";
   out+="_Tenho muitas repetidas para troca — chama no privado!_";
   el.style.display="block";el.textContent=out;
@@ -570,9 +551,8 @@ function renderOrcList(){
     var el=document.createElement("div");el.className="card";
     var html='<div class="card-top"><span class="card-title">'+o.name+'</span>'+
       '<span class="card-meta">'+o.date+'</span></div>'+
-      '<div class="card-sub">'+r.total+' figurinhas • ✨ '+r.brilhantes+' • ⭐ '+r.craques+
+      '<div class="card-sub">'+r.total+' figurinhas • ✨ '+r.brilhantes+
       (so.total?' • <span style="color:#ffd9d9">🔴 '+so.total+' s/ estoque</span>':'')+'</div>';
-    if(r.craques)html+='<div class="card-ace">⭐ '+r.aces.join(" • ")+'</div>';
     html+='<div class="card-actions"><button class="btn btn-sm green">📂 Abrir</button>'+
       '<button class="btn btn-sm red">🗑️ Excluir</button></div>';
     el.innerHTML=html;
@@ -598,7 +578,8 @@ function abrirOrc(id){
   var base=o.requested&&Object.keys(o.requested).length?o.requested:o.offered;
   var c=$("#orcDetailContainer");c.innerHTML="";
   Object.keys(base).sort(function(a,b){return ORDER[a]-ORDER[b]}).forEach(function(code){
-    var t=T[code],d=document.createElement("div");
+    var t=T[code];if(!t)return;
+    var d=document.createElement("div");
     d.className="team g-"+(t.group||"none")+(t.allShiny?" allshiny":"")+(ACES_BY_TEAM[code]?" hasace":"");
     d.innerHTML=teamHeader(t);
     var g=document.createElement("div");g.className="stickers";
@@ -624,7 +605,7 @@ function updOrcCounter(){
   if(!orcAtual)return;
   var sel=ordenaMapa(orcAtual.offered);
   $("#orcCounter").innerHTML=badgesResumo(sel);
-  pintarAces("orcAces",sel,"Craques do orçamento");
+  pintarAces("orcAces",sel);
   var so=semEstoqueDe(sel),w=$("#orcWarn");
   if(mapTotal(so)&&!ignoreStock){
     w.style.display="block";
@@ -679,8 +660,7 @@ function renderSales(){
   $("#salesCounter").innerHTML=
     '<span class="badge ok">'+vendas.length+' venda(s)</span>'+
     '<span class="badge">'+tot+' figurinhas</span>'+
-    '<span class="badge sh">✨ '+r.brilhantes+'</span>'+
-    '<span class="badge ac">⭐ '+r.craques+'</span>';
+    '<span class="badge sh">✨ '+r.brilhantes+'</span>';
   if(!vendas.length){c.innerHTML='<div class="empty">Nenhuma venda registrada ainda.</div>';return}
   c.innerHTML="";
   vendas.forEach(function(v){
@@ -688,8 +668,7 @@ function renderSales(){
     var el=document.createElement("div");el.className="card sale";
     var html='<div class="card-top"><span class="card-title">'+v.name+'</span>'+
       '<span class="card-meta">'+v.date+'</span></div>'+
-      '<div class="card-sub">'+rv.total+' figurinhas • ✨ '+rv.brilhantes+' • ⭐ '+rv.craques+'</div>';
-    if(rv.craques)html+='<div class="card-ace">⭐ '+rv.aces.join(" • ")+'</div>';
+      '<div class="card-sub">'+rv.total+' figurinhas • ✨ '+rv.brilhantes+'</div>';
     html+='<div class="card-actions"><button class="btn btn-sm">📋 Ver lista</button>'+
       '<button class="btn btn-sm blue">↩️ Cancelar Venda</button>'+
       '<button class="btn btn-sm red">🗑️ Excluir</button></div>'+
@@ -754,7 +733,8 @@ function runTests(){
   function ok(nome,cond,msg){res.push({g:grupo,nome:nome,pass:!!cond,msg:msg||""})}
 
   G("Dados");
-  ok("48 seleções + FWC + HIST = 50 blocos",teams.length===50,"encontrados: "+teams.length);
+  ok("48 seleções + FWC = 49 blocos",teams.length===49,"encontrados: "+teams.length);
+  ok("HIST não existe mais",!T.HIST);
   ok("Todos os grupos A–L com 4 seleções",
     Object.keys(GROUP_TITLE).every(function(g){
       return teams.filter(function(t){return t.group===g}).length===4}));
@@ -764,25 +744,33 @@ function runTests(){
   ok("BRA vai de 01 a 20",firstNum("BRA")===1&&lastNum("BRA")===20);
   ok("BRA 0 e 21 inválidos",!validNum("BRA",0)&&!validNum("BRA",21));
   ok("Códigos únicos",Object.keys(T).length===teams.length);
+  ok("980 cromos no total",
+    teams.reduce(function(s,t){return s+t.qty},0)===980,
+    "soma: "+teams.reduce(function(s,t){return s+t.qty},0));
 
-  G("Brilhantes e craques");
+  G("Brilhantes");
   ok("BRA 01 é brilhante",isShiny("BRA",1));
   ok("BRA 02 não é brilhante",!isShiny("BRA",2));
   ok("Todas do FWC são brilhantes",numsOf(T.FWC).every(function(n){return isShiny("FWC",n)}));
-  ok("Todas do HIST são brilhantes",numsOf(T.HIST).every(function(n){return isShiny("HIST",n)}));
-  ok("POR 15 é craque (Cristiano Ronaldo)",isAce("POR",15)&&aceName("POR",15).indexOf("Ronaldo")>-1);
-  ok("FRA 20 é craque (Mbappé)",isAce("FRA",20));
-  ok("ARG 17 é craque (Messi)",isAce("ARG",17));
-  ok("Craque não conta como brilhante",!isShiny("POR",15));
-  ok("Todos os craques têm número válido",
-    Object.keys(ACES).every(function(k){var p=k.split("-");return validNum(p[0],parseInt(p[1],10))}));
+  ok("48 brilhantes de seleção + 20 FWC = 68",
+    teams.filter(function(t){return !t.allShiny}).length+T.FWC.qty===68);
+
+  G("Craques (nível seleção)");
+  ok("POR tem Cristiano Ronaldo",(teamAceNames("POR")[0]||"").indexOf("Ronaldo")>-1);
+  ok("ARG tem Messi",(teamAceNames("ARG")[0]||"").indexOf("Messi")>-1);
+  ok("Nenhum craque por número",!isAce("POR",15)&&!isAce("ARG",17));
+  ok("Craque não tira o brilho da 01",isShiny("BRA",1));
+  ok("Todos os códigos de craque existem",
+    Object.keys(ACES_BY_TEAM).every(function(c){return !!T[c]}));
+  ok("48 seleções com craque mapeado",Object.keys(ACES_BY_TEAM).length===48,
+    "mapeadas: "+Object.keys(ACES_BY_TEAM).length);
+  ok("teamHasAce funciona",teamHasAce("BRA")&&!teamHasAce("FWC"));
 
   G("Contagem");
   var r=contar({BRA:[1,2,3],POR:[15]});
   ok("Total = 4",r.total===4,"total: "+r.total);
   ok("1 brilhante (BRA 01)",r.brilhantes===1);
-  ok("1 craque (POR 15)",r.craques===1);
-  ok("2 normais",r.normais===2);
+  ok("3 normais",r.normais===3,"normais: "+r.normais);
   ok("Faixas 1,2,3,7 → 01-03,07",ranges([1,2,3,7])==="01-03,07",ranges([1,2,3,7]));
 
   G("Parser de listas");
@@ -796,6 +784,8 @@ function runTests(){
   ok("Nome completo do país",p4.found.BRA&&p4.found.BRA.length===3);
   var p5=parseList("BRA 99, XXX 5, https://site.com/12");
   ok("Ignora inválidos e URLs",!p5.found.BRA&&!p5.found.XXX);
+  var p6=parseList("HIST 5");
+  ok("HIST não é mais aceito",!p6.found.HIST);
 
   G("Mapas");
   var om=ordenaMapa({POR:[15,3],BRA:[5,1]});
@@ -810,20 +800,22 @@ function runTests(){
   G("Listas de texto");
   var bl=buildList({BRA:[1],POR:[15]},"TESTE");
   ok("Marca ✨ no texto",bl.indexOf("✨")>-1);
-  ok("Marca ⭐ e nome do craque",bl.indexOf("Cristiano Ronaldo")>-1);
   ok("Assina Catanos Figurinhas",bl.indexOf("Catanos")>-1);
   ok("Mapa vazio avisa",buildList({},"X").indexOf("Nenhuma")>-1);
+  ok("Lista traz 🇧🇷 do Brasil",bl.indexOf("🇧🇷")>-1);
+  ok("Lista traz 🇵🇹 de Portugal",bl.indexOf("🇵🇹")>-1);
+  ok("Lista não usa 🏳️ para país",bl.indexOf("🏳️")===-1);
 
   G("Interface");
   ok("Todas as views do menu existem",
     $$(".dn-item").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
   ok("Todas as abas inferiores existem",
     $$(".tab").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
-  ok("classeBtn marca craque",classeBtn("POR",15,"").indexOf("ace")>-1);
   ok("classeBtn marca brilhante",classeBtn("BRA",1,"").indexOf("shiny")>-1);
+  ok("classeBtn não marca ace",classeBtn("POR",15,"").indexOf("ace")===-1);
 
   G("Scanner");
-  ok("Catálogo com 1000 códigos",window.SCAN_CATALOG_SIZE===1000,"tamanho: "+window.SCAN_CATALOG_SIZE);
+  ok("Catálogo com 980 códigos",window.SCAN_CATALOG_SIZE===980,"tamanho: "+window.SCAN_CATALOG_SIZE);
   if(window.scanMatch){
     ok("Reconhece 'BRA 5'",(scanMatch("BRA 5")[0]||{}).key==="BRA05");
     ok("Reconhece 'FWC00'",(scanMatch("FWC00")[0]||{}).key==="FWC00");
@@ -832,6 +824,7 @@ function runTests(){
     ok("Rejeita lixo",scanMatch("###").length===0);
     ok("Nunca retorna nº fora da faixa",
       scanMatch("BRA 99").every(function(c){return validNum(c.code,c.num)}));
+    ok("Nunca retorna HIST",scanMatch("HIS 5").every(function(c){return c.code!=="HIST"}));
   }
 
   G("Bandeiras");
@@ -841,6 +834,11 @@ function runTests(){
   ok("FWC sem iso usa ícone",flagURL("FWC")===null&&flagHTML("FWC").indexOf("fico")>-1);
   ok("Todas as seleções de grupo têm iso",
     teams.filter(function(t){return t.group}).every(function(t){return !!t.iso}));
+  ok("Emoji de bandeira para BRA",flagEmoji("BRA")==="🇧🇷",flagEmoji("BRA"));
+  ok("Escócia usa tag sequence",flagEmoji("SCO").length>4,flagEmoji("SCO"));
+  ok("FWC mantém 🏆",flagEmoji("FWC")==="🏆");
+  ok("Todas as seleções têm emoji",
+    teams.every(function(t){return flagEmoji(t.code)!=="🏳️"}));
 
   var pass=res.filter(function(x){return x.pass}).length;
   $("#testSummary").innerHTML='<div class="test-sum '+(pass===res.length?"ok":"bad")+'">'+

@@ -8,12 +8,12 @@ try{orcamentos=JSON.parse(localStorage.getItem(K_ORC))||[]}catch(e){}
 try{vendas=JSON.parse(localStorage.getItem(K_SALES))||[]}catch(e){}
 try{demanda=JSON.parse(localStorage.getItem(K_DEM))||[]}catch(e){}
 
-/* migração: FWC 20 -> 00 */
+/* migração: FWC 20 -> 00  +  remoção do bloco HIST (não-oficial) */
 (function migrar(){
+  /* --- FWC 20 -> 00 --- */
   if(stock.FWC&&stock.FWC[20]!==undefined){
     stock.FWC[0]=(stock.FWC[0]||0)+stock.FWC[20];
     delete stock.FWC[20];
-    localStorage.setItem(K_STOCK,JSON.stringify(stock));
   }
   function fixMap(m){
     if(!m||!m.FWC)return;
@@ -22,6 +22,26 @@ try{demanda=JSON.parse(localStorage.getItem(K_DEM))||[]}catch(e){}
   orcamentos.forEach(function(o){fixMap(o.offered);fixMap(o.requested)});
   vendas.forEach(function(v){fixMap(v.sold)});
   demanda.forEach(function(d){fixMap(d.items)});
+
+  /* --- HIST: guarda cópia e remove --- */
+  var achou=!!stock.HIST;
+  function dropHist(m){if(m&&m.HIST){achou=true;delete m.HIST}}
+  orcamentos.forEach(function(o){dropHist(o.offered);dropHist(o.requested)});
+  vendas.forEach(function(v){dropHist(v.sold)});
+  demanda.forEach(function(d){dropHist(d.items)});
+
+  if(achou){
+    try{
+      localStorage.setItem("fig26_hist_backup",JSON.stringify({
+        date:new Date().toISOString(),stock:stock.HIST||null}));
+    }catch(e){}
+    delete stock.HIST;
+    orcamentos=orcamentos.filter(function(o){return Object.keys(o.offered||{}).length});
+    demanda   =demanda.filter(function(d){return Object.keys(d.items||{}).length});
+    console.info("Bloco HIST removido — cópia em localStorage['fig26_hist_backup']");
+  }
+
+  localStorage.setItem(K_STOCK,JSON.stringify(stock));
   localStorage.setItem(K_ORC,JSON.stringify(orcamentos));
   localStorage.setItem(K_SALES,JSON.stringify(vendas));
   localStorage.setItem(K_DEM,JSON.stringify(demanda));
@@ -165,7 +185,7 @@ function demandaDe(code,num){
 
 /* ---------- BACKUP ---------- */
 function exportJSON(){
-  return JSON.stringify({app:"catanos-figurinhas",v:4,date:new Date().toISOString(),
+  return JSON.stringify({app:"catanos-figurinhas",v:5,date:new Date().toISOString(),
     stock:stock,orcamentos:orcamentos,vendas:vendas,demanda:demanda,ignoreStock:ignoreStock},null,1);
 }
 function importJSON(txt){
@@ -175,6 +195,11 @@ function importJSON(txt){
   if(d.vendas)vendas=d.vendas;
   if(d.demanda)demanda=d.demanda;
   if(typeof d.ignoreStock==="boolean"){ignoreStock=d.ignoreStock;saveIgnore()}
+  /* backups antigos podem trazer HIST */
+  delete stock.HIST;
+  orcamentos.forEach(function(o){if(o.offered)delete o.offered.HIST;if(o.requested)delete o.requested.HIST});
+  vendas.forEach(function(v){if(v.sold)delete v.sold.HIST});
+  demanda.forEach(function(d2){if(d2.items)delete d2.items.HIST});
   saveStock();saveOrc();saveSales();saveDem();
 }
 function hoje(){

@@ -1,7 +1,7 @@
 /* =====================================================================
-   SCANNER v2 — detecção automática de sigla + número (verso da figurinha)
+   SCANNER v3 — detecção automática de sigla + número (verso da figurinha)
    ROI → upscale → binarização adaptativa → OCR restrito
-       → fuzzy match no catálogo → votação multi-frame → decisão
+       → match em 2 estágios (sigla → número) → votação → decisão
    ===================================================================== */
 (function(){
 "use strict";
@@ -21,11 +21,13 @@ function E(id){return document.getElementById(id)}
 function log(h){var l=E("scanLog");if(l)l.innerHTML=h+"<br>"+l.innerHTML}
 function norm(s){return String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,"")}
 function flash(bad){
-  var f=E("scanFlash");f.className="scan-flash on"+(bad?" bad":"");
+  var f=E("scanFlash");if(!f)return;
+  f.className="scan-flash on"+(bad?" bad":"");
   setTimeout(function(){f.className="scan-flash"+(bad?" bad":"")},130);
 }
 function feedback(bad){
-  if(!E("scanSound").checked)return;
+  var s=E("scanSound");
+  if(!s||!s.checked)return;
   if(navigator.vibrate)navigator.vibrate(bad?[40,60,40]:28);
   try{
     var A=window.AudioContext||window.webkitAudioContext;if(!A)return;
@@ -38,7 +40,7 @@ function feedback(bad){
 }
 
 /* ---------- CATÁLOGO ---------- */
-var CATALOG=[];
+var CATALOG=[],CODES_UNIQ=null;
 function buildCatalog(){
   CATALOG=[];
   teams.forEach(function(t){
@@ -46,10 +48,12 @@ function buildCatalog(){
       CATALOG.push({code:t.code,num:n,key:t.code+pad(n)});
     });
   });
+  CODES_UNIQ=teams.map(function(t){return t.code});
   window.SCAN_CATALOG_SIZE=CATALOG.length;
 }
+function codesUniq(){return CODES_UNIQ||[]}
 
-/* ---------- distância tolerante ---------- */
+/* ---------- distância tolerante a confusões de OCR ---------- */
 function dist(a,b){
   var m=a.length,n=b.length,i,j,dp=[];
   for(i=0;i<=m;i++)dp[i]=[i];
@@ -80,30 +84,44 @@ function tokens(raw){
   return out;
 }
 
-/* ---------- match ---------- */
+/* ---------- match em 2 estágios: sigla → número ---------- */
 function match(raw,topN){
   var tks=tokens(raw);if(!tks.length)return [];
-  var lock=E("scanLockTeam")&&E("scanLockTeam").checked;
+  var lockEl=E("scanLockTeam"),lock=lockEl&&lockEl.checked;
   var best={};
   tks.forEach(function(tk){
     var qs=tk.s,qn=parseInt(tk.n,10);
     if(isNaN(qn))return;
-    CATALOG.forEach(function(c){
-      var ss=sim(qs,c.code);
-      if(ss<.34)return;
-      var sn;
-      if(c.num===qn)sn=1;
-      else{
-        var a=pad(qn),b=pad(c.num);
-        sn=(a.length===b.length&&sim(a,b)>=.5)?.45:0;
-      }
-      if(!sn)return;
-      var sc=ss*.6+sn*.4;
-      if(lastTeam&&c.code===lastTeam)sc+=CFG.PRIOR;
-      if(lock&&lastTeam&&c.code!==lastTeam)sc-=.35;
-      sc=Math.max(0,Math.min(1,sc));
-      if(!best[c.key]||best[c.key].score<sc)
-        best[c.key]={code:c.code,num:c.num,key:c.key,score:sc};
+
+    /* estágio 1 — só 49 comparações de sigla */
+    var sigs=[];
+    codesUniq().forEach(function(code){
+      var ss=sim(qs,code);
+      if(ss>=.34)sigs.push({code:code,ss:ss});
+    });
+    if(!sigs.length)return;
+    sigs.sort(function(a,b){return b.ss-a.ss});
+    sigs=sigs.slice(0,6);
+
+    /* estágio 2 — só os números das siglas sobreviventes */
+    sigs.forEach(function(s){
+      var t=T[s.code];if(!t)return;
+      numsOf(t).forEach(function(num){
+        var sn;
+        if(num===qn)sn=1;
+        else{
+          var a=pad(qn),b=pad(num);
+          sn=(a.length===b.length&&sim(a,b)>=.5)?.45:0;
+        }
+        if(!sn)return;
+        var sc=s.ss*.6+sn*.4;
+        if(lastTeam&&s.code===lastTeam)sc+=CFG.PRIOR;
+        if(lock&&lastTeam&&s.code!==lastTeam)sc-=.35;
+        sc=Math.max(0,Math.min(1,sc));
+        var key=s.code+pad(num);
+        if(!best[key]||best[key].score<sc)
+          best[key]={code:s.code,num:num,key:key,score:sc};
+      });
     });
   });
   return Object.keys(best).map(function(k){return best[k]})
@@ -265,8 +283,8 @@ function paintScanning(m){
 }
 function paintOK(code,num,q,score){
   var dem=demandaDe(code,num);
-  var tags=(isAce(code,num)?'<span class="tagace">⭐ '+aceName(code,num)+'</span>':"")+
-           (isShiny(code,num)?'<span class="tagshiny">✨ brilhante</span>':"");
+  var tags=(isShiny(code,num)?'<span class="tagshiny">✨ brilhante</span>':"")+
+           (teamHasAce(code)?'<span class="tagace">⭐ '+teamAceLabel(code)+'</span>':"");
   E("scanResult").className="scan-result sr-ok";
   E("scanResult").innerHTML=
     '<div class="sr-code">'+code+' '+pad(num)+'</div>'+
@@ -300,7 +318,7 @@ function renderSession(){
     var s=document.createElement("span");
     s.className="ss-chip"+(i===0?" new":"");
     s.innerHTML=(flagURL(it.code,20)?'<img src="'+flagURL(it.code,20)+'">':"")+
-      it.code+" "+pad(it.num)+(isAce(it.code,it.num)?" ⭐":"")+
+      it.code+" "+pad(it.num)+
       (isShiny(it.code,it.num)?" ✨":"")+' <button title="desfazer">×</button>';
     s.querySelector("button").onclick=function(){undo(i)};
     b.appendChild(s);
