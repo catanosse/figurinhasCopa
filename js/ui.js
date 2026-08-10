@@ -507,12 +507,19 @@ function gerarListaDemanda(){
   var rank=rankDemanda(false),el=$("#outDem");
   if(!rank.length){toast("🎉 Nada procurado no momento","warn2");return}
   var map=demandaMap(),r=contar(map);
+
+  /* mapa de contagem: "BRA-01" -> 3 */
+  var qtd={};
+  rank.forEach(function(it){qtd[it.code+"-"+pad(it.num)]=it.count});
+  function mult(c,n){var q=qtd[c+"-"+pad(n)]||1;return q>1?" (x"+q+")":""}
+
   var out="🔎 *PROCURO ESTAS FIGURINHAS* 🔎\n_Catanos Figurinhas · Copa 2026 — troco ou compro_\n\n";
   Object.keys(map).forEach(function(c){
     out+=flagEmoji(c)+" "+T[c].name+" ("+c+")\n"+map[c].map(function(n){
-      return c+" "+pad(n)+(isShiny(c,n)?"✨":"");
+      return c+" "+pad(n)+(isShiny(c,n)?"✨":"")+mult(c,n);
     }).join(", ")+"\n\n";
   });
+
   var hot=rank.filter(function(it){return it.count>=2});
   if(hot.length){
     out+="🔥 *MAIS PEDIDAS* (prioridade)\n";
@@ -522,9 +529,13 @@ function gerarListaDemanda(){
     });
     out+="\n";
   }
+
   out+="━━━━━━━━━━━━━━━\n📊 *RESUMO*\n";
   out+="Normais: *"+r.normais+"*\n✨ Brilhantes: *"+r.brilhantes+"*\n";
-  out+="🎯 TOTAL PROCURADO: *"+r.total+"* figurinhas\n━━━━━━━━━━━━━━━\n";
+  out+="🎯 TOTAL PROCURADO: *"+r.total+"* figurinhas\n";
+  out+="📦 Somando repetições: *"+rank.reduce(function(s,it){return s+it.count},0)+"* unidades\n";
+  out+="━━━━━━━━━━━━━━━\n";
+  out+="_(x3) = quantas pessoas procuram aquela figurinha_\n";
   out+="_Tenho muitas repetidas para troca — chama no privado!_";
   el.style.display="block";el.textContent=out;
 }
