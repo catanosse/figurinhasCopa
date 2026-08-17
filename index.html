@@ -48,6 +48,9 @@
     <button class="dn-item" data-view="scanner">
       <span class="dn-ic">📷</span><span class="dn-tx"><b>Scanner</b><i>Ler o código pela câmera</i></span>
     </button>
+    <button class="dn-item" data-view="faltantes">
+      <span class="dn-ic">❌</span><span class="dn-tx"><b>Não Tenho</b><i>Ver o que falta no álbum</i></span>
+    </button>
 
     <div class="dn-sec">Negociação</div>
     <button class="dn-item" data-view="oferta">
@@ -127,6 +130,8 @@
       Aceita <b>inline</b> (<code>POR10, POR-14</code>) e <b>agrupado</b> (<code>BIH 🇧🇦: 5, 13</code>).</div></div>
     <div class="step"><div class="n b">↩️</div><div class="txt"><span class="t">Cancelar Venda</span>
       Devolve as figurinhas ao estoque e recria o orçamento.</div></div>
+    <div class="step"><div class="n r">❌</div><div class="txt"><span class="t">Não Tenho</span>
+      Mostra <b>todas</b> as figurinhas do álbum que faltam no seu estoque — use para saber o que precisa conseguir.</div></div>
     <div class="tip">💡 Atalhos: <kbd>?</kbd> ajuda · <kbd>M</kbd> menu · <kbd>Esc</kbd> fecha.</div>
   </div>
 </div>
@@ -329,6 +334,22 @@
   <div class="out" id="scanLog" style="display:block">Pronto.</div>
 </div>
 
+<!-- ================= FALTANTES ================= -->
+<div class="wrapper view hidden" id="v-faltantes">
+  <h2>❌ Não Tenho</h2>
+  <div class="subtitle">Figurinhas do álbum que ainda não estão no seu estoque</div>
+  <div class="counter" id="falCounter">—</div>
+  <div class="acebox" id="falAces"></div>
+  <div class="search-box"><input type="text" id="searchFal" placeholder="🔍 País, sigla, craque ou nº"></div>
+  <div id="falContainer"></div>
+  <div class="actions">
+    <button class="btn green" id="btnListFal">📋 Gerar Lista do que Falta</button>
+    <button class="btn" data-copy="outFal">📎 Copiar</button>
+    <button class="btn blue" data-share="outFal">📲 Compartilhar</button>
+  </div>
+  <div class="out" id="outFal"></div>
+</div>
+
 <!-- ================= TESTES ================= -->
 <div class="wrapper view hidden" id="v-testes">
   <h2>🧪 Testes Unitários</h2>
@@ -350,6 +371,7 @@
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/tests.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/cloud.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>

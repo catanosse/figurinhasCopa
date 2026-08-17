@@ -98,6 +98,16 @@ function clonaMapa(map){
   return m;
 }
 
+/* ---------- FALTANTES ---------- */
+function faltantesMap(){
+  var m={};
+  teams.forEach(function(t){
+    var f=numsOf(t).filter(function(n){return !temEstoque(t.code,n)});
+    if(f.length)m[t.code]=f;
+  });
+  return ordenaMapa(m);
+}
+
 /* ---------- MODO CONFERÊNCIA ---------- */
 var ignoreStock=localStorage.getItem(K_IGN)==="1";
 function saveIgnore(){localStorage.setItem(K_IGN,ignoreStock?"1":"0")}
