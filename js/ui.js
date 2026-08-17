@@ -1,12 +1,55 @@
 /* ================= UI ================= */
 function $(s){return document.querySelector(s)}
-function $$
-(s){return Array.prototype.slice.call(document.querySelectorAll(s))} function val(id){var e=document.getElementById(id);return e?e.value:""} var VIEW_TITLE={estoque:"Estoque",oferta:"Nova Oferta",livre:"Escolha Livre", procuradas:"Procuradas",orcamentos:"Orçamentos",vendas:"Vendas", scanner:"Scanner",testes:"Testes",faltantes:"Não Tenho"}; /* toggle: exibir nome do jogador dentro do quadradinho (checklist não-oficial) */ var showPlayers=localStorage.getItem("fig26_showplayers")==="1"; function toast(m,t){ var el=$("#toast"); el.className="show"+(t?" "+t:"");el.textContent=m; clearTimeout(toast._t); toast._t=setTimeout(function(){el.className=""},2800); } function copiar(id){ var el=document.getElementById(id); if(!el||!el.textContent.trim()){toast("⚠️ Gere a lista primeiro","warn2");return} navigator.clipboard.writeText(el.textContent).then(function(){toast("✅ Copiado! Cole no WhatsApp")}); } function compartilhar(id){ var el=document.getElementById(id); if(!el||!el.textContent.trim()){toast("⚠️ Gere a lista primeiro","warn2");return} if(navigator.share)navigator.share({text:el.textContent}).catch(function(){}); else copiar(id); } /* ---------- DRAWER ---------- */ function drawer(open){ $("#drawer").classList.toggle("show",open); $("#drawerBg").classList.toggle("show",open); $("#btnMenu").classList.toggle("open",open); document.body.style.overflow=open?"hidden":""; if(open)renderDrawerStats(); } function renderDrawerStats(){ var r=contar(stockMap()); $("#drawerStats").innerHTML= '<div class="dstat"><b>'+stockUnidades()+'</b><span>unidades</span></div>'+ '<div class="dstat"><b>'+r.total+'</b><span>diferentes</span></div>'+ '<div class="dstat"><b>'+rankDemanda(false).length+'</b><span>procuradas</span></div>'+ '<div class="dstat"><b>'+vendas.length+'</b><span>vendas</span></div>'; } function go(view,keepOpen){ var v=document.getElementById("v-"+view); if(!v)return;
-$$(".view").forEach(function(x){x.classList.add("hidden")});
+function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+function val(id){var e=document.getElementById(id);return e?e.value:""}
+
+var VIEW_TITLE={estoque:"Estoque",oferta:"Nova Oferta",livre:"Escolha Livre",
+  procuradas:"Procuradas",orcamentos:"Orçamentos",vendas:"Vendas",
+  scanner:"Scanner",testes:"Testes",faltantes:"Não Tenho"};
+
+/* toggle: exibir nome do jogador dentro do quadradinho (checklist não-oficial) */
+var showPlayers=localStorage.getItem("fig26_showplayers")==="1";
+
+function toast(m,t){
+  var el=$("#toast");
+  el.className="show"+(t?" "+t:"");el.textContent=m;
+  clearTimeout(toast._t);
+  toast._t=setTimeout(function(){el.className=""},2800);
+}
+function copiar(id){
+  var el=document.getElementById(id);
+  if(!el||!el.textContent.trim()){toast("⚠️ Gere a lista primeiro","warn2");return}
+  navigator.clipboard.writeText(el.textContent).then(function(){toast("✅ Copiado! Cole no WhatsApp")});
+}
+function compartilhar(id){
+  var el=document.getElementById(id);
+  if(!el||!el.textContent.trim()){toast("⚠️ Gere a lista primeiro","warn2");return}
+  if(navigator.share)navigator.share({text:el.textContent}).catch(function(){});
+  else copiar(id);
+}
+
+/* ---------- DRAWER ---------- */
+function drawer(open){
+  $("#drawer").classList.toggle("show",open);
+  $("#drawerBg").classList.toggle("show",open);
+  $("#btnMenu").classList.toggle("open",open);
+  document.body.style.overflow=open?"hidden":"";
+  if(open)renderDrawerStats();
+}
+function renderDrawerStats(){
+  var r=contar(stockMap());
+  $("#drawerStats").innerHTML=
+    '<div class="dstat"><b>'+stockUnidades()+'</b><span>unidades</span></div>'+
+    '<div class="dstat"><b>'+r.total+'</b><span>diferentes</span></div>'+
+    '<div class="dstat"><b>'+rankDemanda(false).length+'</b><span>procuradas</span></div>'+
+    '<div class="dstat"><b>'+vendas.length+'</b><span>vendas</span></div>';
+}
+function go(view,keepOpen){
+  var v=document.getElementById("v-"+view); if(!v)return;
+  $$(".view").forEach(function(x){x.classList.add("hidden")});
   v.classList.remove("hidden");
-  $$
-(".dn-item").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
-$$(".tab").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
+  $$(".dn-item").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
+  $$(".tab").forEach(function(b){b.classList.toggle("active",b.dataset.view===view)});
   $("#brandSub").textContent="Copa 2026 · "+(VIEW_TITLE[view]||"");
   if(!keepOpen)drawer(false);
   window.scrollTo({top:0,behavior:"smooth"});
@@ -97,14 +140,14 @@ function classeBtn(code,num,extra){
   var c="sticker-btn";
   if(extra)c+=" "+extra;
   if(isShiny(code,num))c+=" shiny";
-  if(showPlayers&&playerAt(code,num))c+=" haveName";
+  if(showPlayers&&typeof playerAt==="function"&&playerAt(code,num))c+=" haveName";
   return c;
 }
 function innerBtn(code,num,qty,demQty){
   var badge="";
   if(qty>1)badge='<span class="qty-badge">'+qty+'</span>';
   else if(demQty>0)badge='<span class="dem-badge">'+demQty+'</span>';
-  var nome=showPlayers?playerAt(code,num):"";
+  var nome=(showPlayers&&typeof playerAt==="function")?playerAt(code,num):"";
   var nomeHTML=nome?'<span class="acen">'+nome+'</span>':"";
   return pad(num)+badge+nomeHTML;
 }
@@ -113,7 +156,7 @@ function mkBtn(code,num,extraClass,qty,demQty){
   b.className=classeBtn(code,num,extraClass);
   b.innerHTML=innerBtn(code,num,qty,demQty);
   var tt=[code+" "+pad(num)];
-  var nome=playerAt(code,num);
+  var nome=typeof playerAt==="function"?playerAt(code,num):null;
   if(nome)tt.push(nome);
   if(isShiny(code,num))tt.push("✨ Brilhante");
   if(!temEstoque(code,num))tt.push("sem estoque — pode selecionar mesmo assim");
@@ -753,22 +796,156 @@ function doImportFile(e){
       renderStock(val("searchStock"));updStockCounter();
       renderOrcList();renderSales();renderDemanda();updDemPill();updOrcPill();
       renderLivre(val("searchLivre"));renderDrawerStats();
+      renderFaltantes(val("searchFal"));
       toast("⬆️ Backup restaurado com sucesso");
     }catch(err){toast("❌ Arquivo inválido","err")}
   };
   rd.readAsText(f);e.target.value="";
 }
 
+/* ================= TESTES ================= */
+function runTests(){
+  var res=[],grupo="";
+  function G(n){grupo=n}
+  function ok(nome,cond,msg){res.push({g:grupo,nome:nome,pass:!!cond,msg:msg||""})}
+
+  G("Dados");
+  ok("48 seleções + FWC = 49 blocos",teams.length===49,"encontrados: "+teams.length);
+  ok("HIST não existe mais",!T.HIST);
+  ok("Todos os grupos A–L com 4 seleções",
+    Object.keys(GROUP_TITLE).every(function(g){
+      return teams.filter(function(t){return t.group===g}).length===4}));
+  ok("FWC vai de 00 a 19",firstNum("FWC")===0&&lastNum("FWC")===19,
+    "de "+pad(firstNum("FWC"))+" a "+pad(lastNum("FWC")));
+  ok("FWC 20 é inválido",!validNum("FWC",20));
+  ok("BRA vai de 01 a 20",firstNum("BRA")===1&&lastNum("BRA")===20);
+  ok("BRA 0 e 21 inválidos",!validNum("BRA",0)&&!validNum("BRA",21));
+  ok("Códigos únicos",Object.keys(T).length===teams.length);
+  ok("980 cromos no total",
+    teams.reduce(function(s,t){return s+t.qty},0)===980,
+    "soma: "+teams.reduce(function(s,t){return s+t.qty},0));
+
+  G("Brilhantes");
+  ok("BRA 01 é brilhante",isShiny("BRA",1));
+  ok("BRA 02 não é brilhante",!isShiny("BRA",2));
+  ok("Todas do FWC são brilhantes",numsOf(T.FWC).every(function(n){return isShiny("FWC",n)}));
+  ok("48 brilhantes de seleção + 20 FWC = 68",
+    teams.filter(function(t){return !t.allShiny}).length+T.FWC.qty===68);
+
+  G("Craques (nível seleção)");
+  ok("POR tem Cristiano Ronaldo",(teamAceNames("POR")[0]||"").indexOf("Ronaldo")>-1);
+  ok("ARG tem Messi",(teamAceNames("ARG")[0]||"").indexOf("Messi")>-1);
+  ok("Nenhum craque por número",!isAce("POR",15)&&!isAce("ARG",17));
+  ok("Craque não tira o brilho da 01",isShiny("BRA",1));
+  ok("Todos os códigos de craque existem",
+    Object.keys(ACES_BY_TEAM).every(function(c){return !!T[c]}));
+  ok("48 seleções com craque mapeado",Object.keys(ACES_BY_TEAM).length===48,
+    "mapeadas: "+Object.keys(ACES_BY_TEAM).length);
+  ok("teamHasAce funciona",teamHasAce("BRA")&&!teamHasAce("FWC"));
+
+  G("Contagem");
+  var r=contar({BRA:[1,2,3],POR:[15]});
+  ok("Total = 4",r.total===4,"total: "+r.total);
+  ok("1 brilhante (BRA 01)",r.brilhantes===1);
+  ok("3 normais",r.normais===3,"normais: "+r.normais);
+  ok("Faixas 1,2,3,7 → 01-03,07",ranges([1,2,3,7])==="01-03,07",ranges([1,2,3,7]));
+
+  G("Parser de listas");
+  var p1=parseList("BIH 🇧🇦: 5, 13");
+  ok("Formato agrupado com emoji",p1.found.BIH&&p1.found.BIH.length===2,JSON.stringify(p1.found));
+  var p2=parseList("POR10, POR-14, bra19");
+  ok("Formato inline",p2.found.POR&&p2.found.POR.length===2&&p2.found.BRA&&p2.found.BRA[0]===19);
+  var p3=parseList("FWC 00, POR 15, ARG 17");
+  ok("Mistos na mesma linha",p3.found.FWC&&p3.found.FWC[0]===0&&p3.found.POR&&p3.found.ARG);
+  var p4=parseList("brasil 1 2 3");
+  ok("Nome completo do país",p4.found.BRA&&p4.found.BRA.length===3);
+  var p5=parseList("BRA 99, XXX 5, https://site.com/12");
+  ok("Ignora inválidos e URLs",!p5.found.BRA&&!p5.found.XXX);
+  var p6=parseList("HIST 5");
+  ok("HIST não é mais aceito",!p6.found.HIST);
+
+  G("Mapas");
+  var om=ordenaMapa({POR:[15,3],BRA:[5,1]});
+  ok("Ordena por ordem do álbum",Object.keys(om)[0]==="BRA");
+  ok("Ordena os números",om.BRA[0]===1&&om.POR[0]===3);
+  ok("mapTotal soma certo",mapTotal({BRA:[1,2],POR:[15]})===3);
+  var cl=clonaMapa({BRA:[1,2]});cl.BRA.push(9);
+  ok("clonaMapa não afeta original",cl.BRA.length===3);
+  ok("resolveCode('méxico') = MEX",resolveCode("méxico")==="MEX");
+  ok("resolveCode inválido = null",resolveCode("zzz")===null);
+
+  G("Listas de texto");
+  var bl=buildList({BRA:[1],POR:[15]},"TESTE");
+  ok("Marca ✨ no texto",bl.indexOf("✨")>-1);
+  ok("Assina Catanos Figurinhas",bl.indexOf("Catanos")>-1);
+  ok("Mapa vazio avisa",buildList({},"X").indexOf("Nenhuma")>-1);
+  ok("Lista traz 🇧🇷 do Brasil",bl.indexOf("🇧🇷")>-1);
+  ok("Lista traz 🇵🇹 de Portugal",bl.indexOf("🇵🇹")>-1);
+  ok("Lista não usa 🏳️ para país",bl.indexOf("🏳️")===-1);
+
+  G("Interface");
+  ok("Todas as views do menu existem",
+    $$(".dn-item").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
+  ok("Todas as abas inferiores existem",
+    $$(".tab").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
+  ok("classeBtn marca brilhante",classeBtn("BRA",1,"").indexOf("shiny")>-1);
+  ok("classeBtn não marca ace",classeBtn("POR",15,"").indexOf("ace")===-1);
+
+  G("Scanner");
+  ok("Catálogo com 980 códigos",window.SCAN_CATALOG_SIZE===980,"tamanho: "+window.SCAN_CATALOG_SIZE);
+  if(window.scanMatch){
+    ok("Reconhece 'BRA 5'",(scanMatch("BRA 5")[0]||{}).key==="BRA05");
+    ok("Reconhece 'FWC00'",(scanMatch("FWC00")[0]||{}).key==="FWC00");
+    ok("Tolera OCR 'BRA O5' → BRA05",(scanMatch("BRA O5")[0]||{}).key==="BRA05");
+    ok("Tolera '8RA 5' → BRA05",(scanMatch("8RA 5")[0]||{}).key==="BRA05");
+    ok("Rejeita lixo",scanMatch("###").length===0);
+    ok("Nunca retorna nº fora da faixa",
+      scanMatch("BRA 99").every(function(c){return validNum(c.code,c.num)}));
+    ok("Nunca retorna HIST",scanMatch("HIS 5").every(function(c){return c.code!=="HIST"}));
+  }
+
+  G("Bandeiras");
+  ok("URL de bandeira gerada para MEX",(flagURL("MEX")||"").indexOf("/mx.png")>-1,flagURL("MEX"));
+  ok("Escócia usa gb-sct",(flagURL("SCO")||"").indexOf("gb-sct")>-1);
+  ok("Inglaterra usa gb-eng",(flagURL("ENG")||"").indexOf("gb-eng")>-1);
+  ok("FWC sem iso usa ícone",flagURL("FWC")===null&&flagHTML("FWC").indexOf("fico")>-1);
+  ok("Todas as seleções de grupo têm iso",
+    teams.filter(function(t){return t.group}).every(function(t){return !!t.iso}));
+  ok("Emoji de bandeira para BRA",flagEmoji("BRA")==="🇧🇷",flagEmoji("BRA"));
+  ok("Escócia usa tag sequence",flagEmoji("SCO").length>4,flagEmoji("SCO"));
+  ok("FWC mantém 🏆",flagEmoji("FWC")==="🏆");
+  ok("Todas as seleções têm emoji",
+    teams.every(function(t){return flagEmoji(t.code)!=="🏳️"}));
+
+  var pass=res.filter(function(x){return x.pass}).length;
+  $("#testSummary").innerHTML='<div class="test-sum '+(pass===res.length?"ok":"bad")+'">'+
+    (pass===res.length?"✅ ":"⚠️ ")+pass+" de "+res.length+" testes passaram</div>";
+  var box=$("#testResults");box.innerHTML="";
+  var lastG="";
+  res.forEach(function(t){
+    if(t.g!==lastG){
+      lastG=t.g;
+      var h=document.createElement("div");h.className="test-grp";h.textContent=t.g;box.appendChild(h);
+    }
+    var d=document.createElement("div");
+    d.className="test-row "+(t.pass?"pass":"fail");
+    d.innerHTML='<span class="st">'+(t.pass?"✔":"✘")+'</span><span>'+t.nome+
+      (t.msg?'<span class="msg">'+t.msg+'</span>':"")+'</span>';
+    box.appendChild(d);
+  });
+  toast(pass===res.length?"✅ Todos os "+res.length+" testes passaram":"⚠️ "+(res.length-pass)+" falha(s)",
+    pass===res.length?"":"err");
+}
+
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded",function(){
-  $$
-(".dn-item").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
-$$(".tab").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
+  $$(".dn-item").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
+  $$(".tab").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
   $("#btnMenu").onclick=function(){drawer(!$("#drawer").classList.contains("show"))};
   $("#btnDrawerClose").onclick=function(){drawer(false)};
   $("#drawerBg").onclick=function(){drawer(false)};
   $("#swIgnore").onclick=toggleIgnore;
-  $("#swPlayers").onclick=togglePlayers;
+  if($("#swPlayers"))$("#swPlayers").onclick=togglePlayers;
   $("#btnHelp").onclick=function(){toggleHelp(true)};
   $("#btnHelpClose").onclick=function(){toggleHelp(false)};
   $("#helpModal").onclick=function(e){if(e.target===this)toggleHelp(false)};
@@ -788,9 +965,8 @@ $$(".tab").forEach(function(b){b.onclick=function(){go(b.dataset.view)}});
     },{passive:true});
   })();
 
-  $$
-("[data-copy]").forEach(function(b){b.onclick=function(){copiar(b.dataset.copy)}});
-$$("[data-share]").forEach(function(b){b.onclick=function(){compartilhar(b.dataset.share)}});
+  $$("[data-copy]").forEach(function(b){b.onclick=function(){copiar(b.dataset.copy)}});
+  $$("[data-share]").forEach(function(b){b.onclick=function(){compartilhar(b.dataset.share)}});
 
   $("#searchStock").oninput=function(){renderStock(this.value)};
   $("#btnListStock").onclick=gerarListaEstoque;
@@ -813,4 +989,42 @@ $$("[data-share]").forEach(function(b){b.onclick=function(){compartilhar(b.datas
   $("#btnListOf").onclick=gerarListaOferta;
   $("#btnSaveOf").onclick=function(){
     if(!oferta)return;
-    if(salvarOrcamento(oferta.name,oferta.offered,oferta.requested)){renderOrcList();go("
+    if(salvarOrcamento(oferta.name,oferta.offered,oferta.requested)){renderOrcList();go("orcamentos")}
+  };
+
+  $("#searchLivre").oninput=function(){renderLivre(this.value)};
+  $("#lvOnlyStock").onchange=function(){renderLivre(val("searchLivre"))};
+  $("#btnListLv").onclick=gerarListaLivre;
+  $("#btnSaveLv").onclick=function(){
+    var nm=val("lvName").trim()||"Cliente sem nome";
+    if(salvarOrcamento(nm,livreSel,livreSel)){
+      livreSel={};$("#outLivre").style.display="none";
+      renderLivre(val("searchLivre"));renderOrcList();go("orcamentos");
+    }
+  };
+  $("#btnClearLv").onclick=function(){
+    livreSel={};$("#outLivre").style.display="none";
+    renderLivre(val("searchLivre"));toast("🗑️ Seleção limpa");
+  };
+
+  $("#searchDem").oninput=renderDemanda;
+  $("#demOnlyHot").onchange=renderDemanda;
+  $("#btnListDem").onclick=gerarListaDemanda;
+  $("#btnClearDem").onclick=limparDemanda;
+
+  $("#btnListOrc").onclick=gerarListaOrc;
+  $("#btnVenda").onclick=confirmarVenda;
+  $("#btnCloseOrc").onclick=fecharOrc;
+
+  $("#btnTests").onclick=runTests;
+
+  if($("#searchFal"))$("#searchFal").oninput=function(){renderFaltantes(this.value)};
+  if($("#btnListFal"))$("#btnListFal").onclick=gerarListaFaltantes;
+
+  paintIgnore();
+  paintPlayers();
+  renderStock("");updStockCounter();
+  renderLivre("");renderOrcList();renderSales();renderDemanda();
+  if($("#falContainer"))renderFaltantes("");
+  updDemPill();updOrcPill();renderDrawerStats();
+});
