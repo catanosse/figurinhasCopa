@@ -107,51 +107,65 @@ function flagEmoji(code){
    varia por seleção: emblema=1, foto do time flutua (ex: ALG-13),
    jogadores em ordem tática. Guardamos só QUEM é o craque.       */
 var ACES_BY_TEAM={
- POR:[{name:"Cristiano Ronaldo"}], NOR:[{name:"Erling Haaland"}],
- ESP:[{name:"Lamine Yamal"}],      FRA:[{name:"Kylian Mbappé"}],
- NED:[{name:"Memphis Depay"}],     ARG:[{name:"Lionel Messi"}],
- BRA:[{name:"Vinícius Júnior"}],   ENG:[{name:"Jude Bellingham"}],
- BEL:[{name:"Kevin De Bruyne"}],   EGY:[{name:"Mohamed Salah"}],
- KOR:[{name:"Son Heung-min"}],     URU:[{name:"Federico Valverde"}],
- COL:[{name:"Luis Díaz"}],         MAR:[{name:"Achraf Hakimi"}],
- CRO:[{name:"Luka Modrić"}],       GER:[{name:"Jamal Musiala"}],
- JPN:[{name:"Takefusa Kubo"}],     SEN:[{name:"Sadio Mané"}],
- MEX:[{name:"Santiago Giménez"}],  USA:[{name:"Christian Pulisic"}],
- SWE:[{name:"Viktor Gyökeres"}],   CIV:[{name:"Simon Adingra"}],
- ECU:[{name:"Moisés Caicedo"}],    CAN:[{name:"Alphonso Davies"}],
- AUS:[{name:"Jackson Irvine"}],    SUI:[{name:"Granit Xhaka"}],
- TUR:[{name:"Arda Güler"}],        ALG:[{name:"Riyad Mahrez"}],
- AUT:[{name:"Marcel Sabitzer"}],   GHA:[{name:"Mohammed Kudus"}],
- PAN:[{name:"Adalberto Carrasquilla"}], IRN:[{name:"Mehdi Taremi"}],
- TUN:[{name:"Hannibal Mejbri"}],   PAR:[{name:"Miguel Almirón"}],
- CZE:[{name:"Patrik Schick"}],     RSA:[{name:"Percy Tau"}],
- QAT:[{name:"Akram Afif"}],        KSA:[{name:"Salem Al-Dawsari"}],
- NZL:[{name:"Chris Wood"}],        SCO:[{name:"Scott McTominay"}],
- CPV:[{name:"Ryan Mendes"}],       UZB:[{name:"Eldor Shomurodov"}],
- JOR:[{name:"Musa Al-Taamari"}],   IRQ:[{name:"Aymen Hussein"}],
- COD:[{name:"Cédric Bakambu"}],    HAI:[{name:"Frantzdy Pierrot"}],
- CUW:[{name:"Juninho Bacuna"}],    BIH:[{name:"Edin Džeko"}]
+POR:[{name:"Cristiano Ronaldo",num:15}], NOR:[{name:"Erling Haaland",num:15}],
+ESP:[{name:"Lamine Yamal",num:15}],      FRA:[{name:"Kylian Mbappé",num:20}],
+NED:[{name:"Memphis Depay",num:17}],     ARG:[{name:"Lionel Messi",num:17}],
+BA:[{name:"Vinícius Júnior",num:14}],   ENG:[{name:"Jude Bellingham",num:11}],
+BEL:[{name:"Kevin De Bruyne",num:15}],   EGY:[{name:"Mohamed Salah",num:17}],
+KOR:[{name:"Son Heung-min",num:18}],     URU:[{name:"Federico Valverde",num:10}],
+COL:[{name:"Luis Díaz",num:20}],         MAR:[{name:"Achraf Hakimi",num:4}],
+CRO:[{name:"Luka Modrić",num:9}],        GER:[{name:"Jamal Musiala",num:15}],
+JPN:[{name:"Takefusa Kubo",num:12}],     SEN:[{name:"Sadio Mané",num:15}],
+MEX:[{name:"Santiago Giménez",num:16}],  USA:[{name:"Christian Pulisic",num:16}],
+SWE:[{name:"Viktor Gyökeres",num:20}],   CIV:[{name:"Simon Adingra",num:17}],
+ECU:[{name:"Moisés Caicedo",num:9}],     CAN:[{name:"Alphonso Davies",num:3}],
+AUS:[{name:"Jackson Irvine",num:11}],    SUI:[{name:"Granit Xhaka",num:9}],
+TUR:[{name:"Arda Güler",num:14}],        ALG:[{name:"Riyad Mahrez",num:15}],
+AUT:[{name:"Marcel Sabitzer",num:11}],   GHA:[{name:"Mohammed Kudus",num:14}],
+PAN:[{name:"Adalberto Carrasquilla",num:12}], IRN:[{name:"Mehdi Taremi",num:18}],
+TUN:[{name:"Hannibal Mejbri",num:14}],   PAR:[{name:"Miguel Almirón",num:17}],
+CZE:[{name:"Patrik Schick",num:20}],     RSA:[{name:"Percy Tau",num:null}],
+QAT:[{name:"Akram Afif",num:18}],        KSA:[{name:"Salem Al-Dawsari",num:16}],
+NZL:[{name:"Chris Wood",num:17}],        SCO:[{name:"Scott McTominay",num:11}],
+CPV:[{name:"Ryan Mendes",num:17}],       UZB:[{name:"Eldor Shomurodov",num:16}],
+JOR:[{name:"Musa Al-Taamari",num:15}],   IRQ:[{name:"Aymen Hussein",num:19}],
+COD:[{name:"Cédric Bakambu",num:19}],    HAI:[{name:"Frantzdy Pierrot",num:20}],
+CUW:[{name:"Juninho Bacuna",num:11}],    BIH:[{name:"Edin Džeko",num:18}]
 };
 
 function pad(n){return String(n).padStart(2,"0")}
 
-/* ---- API antiga preservada: craque por número é desconhecido ---- */
-var ACES={};
+/* ---- Craque com número identificado (quando disponível) ---- */
 function aceKey(c,n){return c+"-"+pad(n)}
-function isAce(){return false}
-function aceName(){return ""}
-function aceShort(){return ""}
-function aceLabel(){return ""}
+function isAce(code,num){
+  var a=(ACES_BY_TEAM[code]||[])[0];
+  return !!(a&&a.num===num);
+}
+function aceName(code,num){
+  var a=(ACES_BY_TEAM[code]||[])[0];
+  return (a&&a.num===num)?a.name:"";
+}
+function aceShort(code,num){return aceName(code,num)}
+function aceLabel(code,num){
+  var n=aceName(code,num);
+  return n?"⭐ "+n:"";
+}
 
-/* ---- API nova: nível seleção ---- */
+/* ---- API nível seleção ---- */
 function teamHasAce(code){return !!ACES_BY_TEAM[code]}
 function teamAceNames(code){
   return (ACES_BY_TEAM[code]||[]).map(function(a){return a.name});
 }
-function teamAceLabel(code){
-  var n=teamAceNames(code);
-  return n.length?n.join(" • "):"";
+function teamAceNum(code){
+  var a=(ACES_BY_TEAM[code]||[])[0];
+  return a?a.num:null;
 }
+function teamAceLabel(code){
+  var a=(ACES_BY_TEAM[code]||[])[0];
+  if(!a)return "";
+  return a.num?a.name+" (nº "+pad(a.num)+")":a.name+" (número não confirmado)";
+}
+
 
 /* ======================================================
    JOGADORES POR NÚMERO — checklist não-oficial, coletado
@@ -498,7 +512,13 @@ var PLAYERS_BY_KEY={
  "PAN-15":"Carlos Harvey","PAN-16":"Ismael Díaz","PAN-17":"José Fajardo",
  "PAN-18":"Cecilio Waterman","PAN-19":"José Luis Rodríguez","PAN-20":"Alberto Quintero"
 };
-function playerAt(code,num){return PLAYERS_BY_KEY[code+"-"+pad(num)]||""}
+function playerAt(code,num){
+   if(code!=="FWC"){
+     if(num===1)return "Escudo";
+     if(num===13)return "Equipe";
+   }
+   return PLAYERS_BY_KEY[code+"-"+pad(num)]||"";
+ }
 
 /* ---------- NUMERAÇÃO ---------- */
 function firstOf(t){return t.firstZero?0:1}

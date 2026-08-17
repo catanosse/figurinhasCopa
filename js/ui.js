@@ -140,6 +140,7 @@ function classeBtn(code,num,extra){
   var c="sticker-btn";
   if(extra)c+=" "+extra;
   if(isShiny(code,num))c+=" shiny";
+  if(isAce(code,num))c+=" ace";
   if(showPlayers&&typeof playerAt==="function"&&playerAt(code,num))c+=" haveName";
   return c;
 }
@@ -149,7 +150,8 @@ function innerBtn(code,num,qty,demQty){
   else if(demQty>0)badge='<span class="dem-badge">'+demQty+'</span>';
   var nome=(showPlayers&&typeof playerAt==="function")?playerAt(code,num):"";
   var nomeHTML=nome?'<span class="acen">'+nome+'</span>':"";
-  return pad(num)+badge+nomeHTML;
+  var star=isAce(code,num)?'<span class="acestar">⭐</span>':"";
+  return pad(num)+badge+star+nomeHTML;
 }
 function mkBtn(code,num,extraClass,qty,demQty){
   var b=document.createElement("button");
@@ -159,6 +161,7 @@ function mkBtn(code,num,extraClass,qty,demQty){
   var nome=typeof playerAt==="function"?playerAt(code,num):null;
   if(nome)tt.push(nome);
   if(isShiny(code,num))tt.push("✨ Brilhante");
+  if(isAce(code,num))tt.push("⭐ Craque da seleção");
   if(!temEstoque(code,num))tt.push("sem estoque — pode selecionar mesmo assim");
   if(demQty>0)tt.push(demQty+" pessoa(s) procurando");
   b.title=tt.join(" • ");
@@ -175,8 +178,7 @@ function teamHeader(t){
   var have=Object.keys(stock[t.code]||{}).length;
   h+='<span class="tct">'+have+'/'+countNums(t.code)+'</span></span></div>';
   if(ACES_BY_TEAM[t.code]){
-    h+='<div class="acelist">⭐ Craque desta seleção: <b>'+teamAceLabel(t.code)+
-       '</b> — número no álbum não confirmado</div>';
+    h+='<div class="acelist">⭐ Craque desta seleção: <b>'+teamAceLabel(t.code)+'</b></div>';
   }
   return h;
 }
@@ -835,13 +837,23 @@ function runTests(){
   G("Craques (nível seleção)");
   ok("POR tem Cristiano Ronaldo",(teamAceNames("POR")[0]||"").indexOf("Ronaldo")>-1);
   ok("ARG tem Messi",(teamAceNames("ARG")[0]||"").indexOf("Messi")>-1);
-  ok("Nenhum craque por número",!isAce("POR",15)&&!isAce("ARG",17));
-  ok("Craque não tira o brilho da 01",isShiny("BRA",1));
+  ok("POR 15 é o craque (CR7)",isAce("POR",15));
+  ok("ARG 17 é o craque (Messi)",isAce("ARG",17));
+  ok("BRA 14 é o craque (Vini Jr)",isAce("BRA",14));
+  ok("POR 10 não é craque",!isAce("POR",10));
+  ok("Craque não tira o brilho da 01",isShiny("BRA",1)&&!isAce("BRA",1));
+  ok("teamAceNum retorna número certo",teamAceNum("ESP")===15);
+  ok("RSA sem número confirmado ainda",teamAceNum("RSA")===null);
   ok("Todos os códigos de craque existem",
     Object.keys(ACES_BY_TEAM).every(function(c){return !!T[c]}));
   ok("48 seleções com craque mapeado",Object.keys(ACES_BY_TEAM).length===48,
     "mapeadas: "+Object.keys(ACES_BY_TEAM).length);
   ok("teamHasAce funciona",teamHasAce("BRA")&&!teamHasAce("FWC"));
+
+  G("Nomes fixos 01/13");
+  ok("BRA 01 = Escudo",playerAt("BRA",1)==="Escudo");
+  ok("BRA 13 = Equipe",playerAt("BRA",13)==="Equipe");
+  ok("MEX 02 mantém jogador normal",playerAt("MEX",2)==="Luis Malagón");
 
   G("Contagem");
   var r=contar({BRA:[1,2,3],POR:[15]});
