@@ -7,6 +7,9 @@ var VIEW_TITLE={estoque:"Estoque",oferta:"Nova Oferta",livre:"Escolha Livre",
   procuradas:"Procuradas",orcamentos:"Orçamentos",vendas:"Vendas",
   scanner:"Scanner",testes:"Testes"};
 
+/* toggle: exibir nome do jogador dentro do quadradinho (parcial — 40/48 seleções) */
+var showPlayers=localStorage.getItem("fig26_showplayers")==="1";
+
 function toast(m,t){
   var el=$("#toast");
   el.className="show"+(t?" "+t:"");el.textContent=m;
@@ -76,6 +79,22 @@ function toggleIgnore(){
   toast(ignoreStock?"🔓 Sem conferência — seleções preservadas":"🔒 Conferência ativada — seleções preservadas","warn2");
 }
 
+/* ---------- MODO NOMES DE JOGADORES ---------- */
+function paintPlayers(){
+  var sw=$("#swPlayers"); if(!sw)return;
+  sw.classList.toggle("on",showPlayers);
+}
+function togglePlayers(){
+  showPlayers=!showPlayers;
+  localStorage.setItem("fig26_showplayers",showPlayers?"1":"0");
+  paintPlayers();
+  renderStock(val("searchStock"));
+  renderLivre(val("searchLivre"));
+  if(oferta)renderOferta();
+  if(orcAtual)abrirOrc(orcAtual.id);
+  toast(showPlayers?"👤 Nomes de jogadores ativados (parcial — algumas seleções ainda sem checklist oficial)":"👤 Nomes ocultados","warn2");
+}
+
 /* ---------- LISTAS DE TEXTO ---------- */
 function buildList(map,title){
   var out="🏆 *"+title+"* 🏆\n_Catanos Figurinhas · Copa 2026_\n\n",any=false,lastG="__";
@@ -120,19 +139,24 @@ function classeBtn(code,num,extra){
   var c="sticker-btn";
   if(extra)c+=" "+extra;
   if(isShiny(code,num))c+=" shiny";
+  if(showPlayers&&playerAt(code,num))c+=" haveName";
   return c;
 }
 function innerBtn(code,num,qty,demQty){
   var badge="";
   if(qty>1)badge='<span class="qty-badge">'+qty+'</span>';
   else if(demQty>0)badge='<span class="dem-badge">'+demQty+'</span>';
-  return pad(num)+badge;
+  var nome=showPlayers?playerAt(code,num):"";
+  var nomeHTML=nome?'<span class="acen">'+nome+'</span>':"";
+  return pad(num)+badge+nomeHTML;
 }
 function mkBtn(code,num,extraClass,qty,demQty){
   var b=document.createElement("button");
   b.className=classeBtn(code,num,extraClass);
   b.innerHTML=innerBtn(code,num,qty,demQty);
   var tt=[code+" "+pad(num)];
+  var nome=playerAt(code,num);
+  if(nome)tt.push(nome);
   if(isShiny(code,num))tt.push("✨ Brilhante");
   if(!temEstoque(code,num))tt.push("sem estoque — pode selecionar mesmo assim");
   if(demQty>0)tt.push(demQty+" pessoa(s) procurando");
@@ -508,7 +532,6 @@ function gerarListaDemanda(){
   if(!rank.length){toast("🎉 Nada procurado no momento","warn2");return}
   var map=demandaMap(),r=contar(map);
 
-  /* mapa de contagem: "BRA-01" -> 3 */
   var qtd={};
   rank.forEach(function(it){qtd[it.code+"-"+pad(it.num)]=it.count});
   function mult(c,n){var q=qtd[c+"-"+pad(n)]||1;return q>1?" (x"+q+")":""}
@@ -777,6 +800,14 @@ function runTests(){
     "mapeadas: "+Object.keys(ACES_BY_TEAM).length);
   ok("teamHasAce funciona",teamHasAce("BRA")&&!teamHasAce("FWC"));
 
+  G("Jogadores por número");
+  ok("BRA 14 é Vinícius Júnior",playerAt("BRA",14)==="Vinícius Júnior",playerAt("BRA",14));
+  ok("ARG 17 é Lionel Messi",playerAt("ARG",17)==="Lionel Messi",playerAt("ARG",17));
+  ok("POR 15 é Cristiano Ronaldo",playerAt("POR",15)==="Cristiano Ronaldo",playerAt("POR",15));
+  ok("Número 1 (escudo) não tem jogador",playerAt("BRA",1)==="");
+  ok("Número 13 (foto do time) não tem jogador",playerAt("BRA",13)==="");
+  ok("Código inexistente retorna vazio",playerAt("ZZZ",5)==="");
+
   G("Contagem");
   var r=contar({BRA:[1,2,3],POR:[15]});
   ok("Total = 4",r.total===4,"total: "+r.total);
@@ -824,6 +855,7 @@ function runTests(){
     $$(".tab").every(function(b){return !!document.getElementById("v-"+b.dataset.view)}));
   ok("classeBtn marca brilhante",classeBtn("BRA",1,"").indexOf("shiny")>-1);
   ok("classeBtn não marca ace",classeBtn("POR",15,"").indexOf("ace")===-1);
+  ok("Toggle de nomes existe no DOM",!!document.getElementById("swPlayers"));
 
   G("Scanner");
   ok("Catálogo com 980 códigos",window.SCAN_CATALOG_SIZE===980,"tamanho: "+window.SCAN_CATALOG_SIZE);
@@ -879,6 +911,7 @@ document.addEventListener("DOMContentLoaded",function(){
   $("#btnDrawerClose").onclick=function(){drawer(false)};
   $("#drawerBg").onclick=function(){drawer(false)};
   $("#swIgnore").onclick=toggleIgnore;
+  $("#swPlayers").onclick=togglePlayers;
   $("#btnHelp").onclick=function(){toggleHelp(true)};
   $("#btnHelpClose").onclick=function(){toggleHelp(false)};
   $("#helpModal").onclick=function(e){if(e.target===this)toggleHelp(false)};
@@ -952,6 +985,7 @@ document.addEventListener("DOMContentLoaded",function(){
   $("#btnTests").onclick=runTests;
 
   paintIgnore();
+  paintPlayers();
   renderStock("");updStockCounter();
   renderLivre("");renderOrcList();renderSales();renderDemanda();
   updDemPill();updOrcPill();renderDrawerStats();

@@ -32,7 +32,7 @@
 <aside class="drawer" id="drawer">
   <div class="drawer-head">
     <div>
-      <div class="dh-title">🏆 Catanos Figurinhas V7</div>
+      <div class="dh-title">🏆 Catanos Figurinhas V6</div>
       <div class="dh-sub">Gestão de figurinhas · Copa 2026</div>
     </div>
     <button class="icon-btn" id="btnDrawerClose" aria-label="Fechar">✕</button>
@@ -79,9 +79,6 @@
   <div class="drawer-foot">
     <div class="switch" id="swIgnore" title="Liga/desliga a conferência — suas seleções são preservadas">
       <span class="track"></span><span id="swLabel">Conferir estoque</span>
-    </div>
-    <div class="switch" id="swPlayers" title="Mostra o nome do jogador dentro do quadradinho (checklist não-oficial)" style="margin-top:8px">
-      <span class="track"></span><span>👤 Nomes dos jogadores</span>
     </div>
     <div class="dh-sub" style="margin-top:9px">Backup local do arquivo de dados</div>
     <div class="drawer-foot-btns">
